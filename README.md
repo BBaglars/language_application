@@ -81,4 +81,9 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 - Website: [www.example.com](http://www.example.com)
 - Email: info@example.com
-- Twitter: [@example](https://twitter.com/example) 
+- Twitter: [@example](https://twitter.com/example)
+
+## Yapılan Veritabanı Bağlantı Testi
+
+- ![image](https://github.com/user-attachments/assets/fb350fab-9c1a-43ee-bd6a-f15dfb2a09f7)
+
