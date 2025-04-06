@@ -9,8 +9,14 @@ yarn-error.log
 .env.local
 .env.*.local
 
-# Firebase
-firebase-service-account.json
+# Logs
+logs/
+*.log
+
+# Build
+dist/
+build/
+coverage/
 
 # IDE
 .idea/
@@ -22,25 +28,27 @@ firebase-service-account.json
 .DS_Store
 Thumbs.db
 
-# Logs
-logs/
-*.log
-
-# Build
-dist/
-build/
-coverage/
-
 # Temporary files
 tmp/
 temp/
 
-# Database
-*.sqlite
-*.sqlite3
-
 # Debug
 .debug/
+
+# Test coverage
+coverage/
+
+# Production
+build/
+dist/
+
+# Misc
+*.bak
+*.tmp
+*.temp
+
+# Firebase
+firebase-service-account.json
 
 # Optional npm cache directory
 .npm

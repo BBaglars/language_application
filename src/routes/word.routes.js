@@ -1,113 +1,144 @@
 const express = require('express');
 const router = express.Router();
-const { body, validationResult } = require('express-validator');
-const db = require('../config/database');
+const { verifyFirebaseToken, checkAdminRole, checkUserPermission } = require('../middleware/auth.middleware');
+const { validateSchema, wordSchema, validateQuery, paginationSchema, filterSchema } = require('../middleware/validation.middleware');
+const { catchAsync } = require('../middleware/error.middleware');
+const WordService = require('../services/word.service');
+const Joi = require('joi');
 
-// Kelime ekleme
+// Kelime ekleme (sadece admin)
 router.post('/',
-  [
-    body('word').notEmpty().trim(),
-    body('translation').notEmpty().trim(),
-    body('category').notEmpty().trim(),
-    body('example').optional().trim()
-  ],
-  async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
+    verifyFirebaseToken,
+    checkAdminRole,
+    validateSchema(wordSchema),
+    catchAsync(async (req, res) => {
+        const word = await WordService.addWord(req.admin.id, req.body);
+        res.status(201).json({
+            status: 'success',
+            data: { word }
+        });
+    })
+);
 
-      const { word, translation, category, example } = req.body;
-      const userId = req.user.uid;
-
-      const result = await db.query(
-        `INSERT INTO words (user_id, word, translation, category, example)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [userId, word, translation, category, example]
-      );
-
-      res.status(201).json(result.rows[0]);
-    } catch (error) {
-      console.error('Word creation error:', error);
-      res.status(500).json({ error: 'Kelime eklenirken bir hata oluştu' });
-    }
-  }
+// Kelime detaylarını getirme
+router.get('/:id',
+    verifyFirebaseToken,
+    catchAsync(async (req, res) => {
+        const word = await WordService.getWordById(req.params.id);
+        res.status(200).json({
+            status: 'success',
+            data: { word }
+        });
+    })
 );
 
 // Kullanıcının kelimelerini getirme
-router.get('/', async (req, res) => {
-  try {
-    const userId = req.user.uid;
-    const result = await db.query(
-      'SELECT * FROM words WHERE user_id = $1 ORDER BY created_at DESC',
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Word fetch error:', error);
-    res.status(500).json({ error: 'Kelimeler getirilirken bir hata oluştu' });
-  }
-});
-
-// Kelime güncelleme
-router.put('/:id',
-  [
-    body('word').optional().trim(),
-    body('translation').optional().trim(),
-    body('category').optional().trim(),
-    body('example').optional().trim()
-  ],
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.user.uid;
-      const { word, translation, category, example } = req.body;
-
-      const result = await db.query(
-        `UPDATE words 
-         SET word = COALESCE($1, word),
-             translation = COALESCE($2, translation),
-             category = COALESCE($3, category),
-             example = COALESCE($4, example)
-         WHERE id = $5 AND user_id = $6
-         RETURNING *`,
-        [word, translation, category, example, id, userId]
-      );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'Kelime bulunamadı' });
-      }
-
-      res.json(result.rows[0]);
-    } catch (error) {
-      console.error('Word update error:', error);
-      res.status(500).json({ error: 'Kelime güncellenirken bir hata oluştu' });
-    }
-  }
+router.get('/user/:userId',
+    verifyFirebaseToken,
+    checkUserPermission,
+    validateQuery({ ...paginationSchema, ...filterSchema }),
+    catchAsync(async (req, res) => {
+        const words = await WordService.getWordsByUser(req.params.userId, req.query);
+        res.status(200).json({
+            status: 'success',
+            data: { words }
+        });
+    })
 );
 
-// Kelime silme
-router.delete('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.uid;
+// Kategoriye göre kelimeleri getirme
+router.get('/category/:categoryId',
+    verifyFirebaseToken,
+    validateQuery({ ...paginationSchema, ...filterSchema }),
+    catchAsync(async (req, res) => {
+        const words = await WordService.getWordsByCategory(req.params.categoryId, req.query);
+        res.status(200).json({
+            status: 'success',
+            data: { words }
+        });
+    })
+);
 
-    const result = await db.query(
-      'DELETE FROM words WHERE id = $1 AND user_id = $2 RETURNING *',
-      [id, userId]
-    );
+// Kelime güncelleme (sadece admin)
+router.put('/:id',
+    verifyFirebaseToken,
+    checkAdminRole,
+    validateSchema(wordSchema),
+    catchAsync(async (req, res) => {
+        const word = await WordService.updateWord(req.params.id, req.body);
+        res.status(200).json({
+            status: 'success',
+            data: { word }
+        });
+    })
+);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Kelime bulunamadı' });
-    }
+// Kelime silme (sadece admin)
+router.delete('/:id',
+    verifyFirebaseToken,
+    checkAdminRole,
+    catchAsync(async (req, res) => {
+        await WordService.deleteWord(req.params.id);
+        res.status(204).json({
+            status: 'success',
+            data: null
+        });
+    })
+);
 
-    res.json({ message: 'Kelime başarıyla silindi' });
-  } catch (error) {
-    console.error('Word deletion error:', error);
-    res.status(500).json({ error: 'Kelime silinirken bir hata oluştu' });
-  }
-});
+// Kelime seviyesini güncelleme
+router.patch('/:id/mastery',
+    verifyFirebaseToken,
+    validateSchema({
+        mastery_level: Joi.number().min(0).max(5).required()
+    }),
+    catchAsync(async (req, res) => {
+        await WordService.updateWordMastery(req.currentUser.id, req.params.id, req.body.mastery_level);
+        res.status(200).json({
+            status: 'success',
+            message: 'Kelime seviyesi güncellendi'
+        });
+    })
+);
+
+// Oyun için kelimeleri getirme
+router.get('/game/:gameTypeId',
+    verifyFirebaseToken,
+    catchAsync(async (req, res) => {
+        const words = await WordService.getWordsForGame(req.currentUser.id, req.params.gameTypeId);
+        res.status(200).json({
+            status: 'success',
+            data: { words }
+        });
+    })
+);
+
+// Kelime arama
+router.get('/search',
+    verifyFirebaseToken,
+    validateQuery({
+        query: Joi.string().min(1).required(),
+        ...paginationSchema
+    }),
+    catchAsync(async (req, res) => {
+        const words = await WordService.searchWords(req.query.query, req.query);
+        res.status(200).json({
+            status: 'success',
+            data: { words }
+        });
+    })
+);
+
+// Kelime istatistiklerini getirme
+router.get('/:id/stats',
+    verifyFirebaseToken,
+    catchAsync(async (req, res) => {
+        const stats = await WordService.getWordStats(req.params.id);
+        res.status(200).json({
+            status: 'success',
+            data: { stats }
+        });
+    })
+);
 
 module.exports = router; 
