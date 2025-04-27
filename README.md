@@ -1,84 +1,99 @@
 # Dil Öğrenme Uygulaması
 
-Bu proje, kullanıcıların yeni bir dil öğrenmelerine yardımcı olan interaktif bir web uygulamasıdır.
+Bu proje, kullanıcıların yabancı dil öğrenmelerine yardımcı olan bir web uygulamasıdır.
 
 ## Özellikler
 
-- Kullanıcı kaydı ve girişi (Firebase Authentication)
+- Kullanıcı yönetimi ve kimlik doğrulama
 - Kelime öğrenme ve pratik yapma
-- Kategori bazlı kelime grupları
-- Oyunlaştırılmış öğrenme deneyimi
-- AI destekli metin üretimi ve analizi
-- İlerleme takibi ve istatistikler
-- Bildirim sistemi
-- Admin paneli
+- Kategorilere göre kelime grupları
+- Oyunlar ve alıştırmalar
+- İlerleme takibi
+- Başarılar ve rozetler
+- Yapay zeka destekli öğrenme
 
-## Teknolojiler
+## Kurulum
 
-- Node.js
-- Express.js
-- MySQL
-- Redis
-- Firebase
+### Gereksinimler
+
+- Node.js (v18 veya üzeri)
+- PostgreSQL
+- Firebase Admin SDK
 - OpenAI API
-- JWT
-- Jest (Test)
 
+### Adımlar
 
-## API Endpoints
+1. Projeyi klonlayın:
+```bash
+git clone https://github.com/kullanici/dil-ogrenme-app.git
+cd dil-ogrenme-app
+```
 
-### Kimlik Doğrulama
-- `POST /api/auth/register` - Kullanıcı kaydı
-- `POST /api/auth/login` - Kullanıcı girişi
-- `POST /api/auth/logout` - Çıkış yapma
-- `POST /api/auth/forgot-password` - Şifre sıfırlama isteği
-- `POST /api/auth/reset-password` - Şifre sıfırlama
+2. Bağımlılıkları yükleyin:
+```bash
+npm install
+```
 
-### Kelimeler
-- `GET /api/words` - Kelime listesi
-- `POST /api/words` - Yeni kelime ekleme (Admin)
-- `GET /api/words/:id` - Kelime detayları
-- `PUT /api/words/:id` - Kelime güncelleme (Admin)
-- `DELETE /api/words/:id` - Kelime silme (Admin)
+3. `.env` dosyasını oluşturun:
+```bash
+cp .env.example .env
+```
 
-### Kategoriler
-- `GET /api/categories` - Kategori listesi
-- `POST /api/categories` - Yeni kategori ekleme (Admin)
-- `GET /api/categories/:id` - Kategori detayları
-- `PUT /api/categories/:id` - Kategori güncelleme (Admin)
-- `DELETE /api/categories/:id` - Kategori silme (Admin)
+4. `.env` dosyasını düzenleyin:
+```env
+# Uygulama
+PORT=3000
+NODE_ENV=development
 
-### Oyunlar
-- `POST /api/games/sessions` - Oyun oturumu başlatma
-- `POST /api/games/sessions/:sessionId/answers` - Cevap gönderme
-- `POST /api/games/sessions/:sessionId/complete` - Oyun oturumunu tamamlama
-- `GET /api/games/stats` - Oyun istatistikleri
+# PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=dil_ogrenme
+DB_USER=postgres
+DB_PASSWORD=your_password
 
-### Kullanıcı
-- `GET /api/users/profile` - Kullanıcı profili
-- `PUT /api/users/profile` - Profil güncelleme
-- `GET /api/users/stats` - Kullanıcı istatistikleri
-- `GET /api/users/achievements` - Başarılar
-- `GET /api/users/progress` - İlerleme durumu
+# Firebase
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_PRIVATE_KEY=your_private_key
+FIREBASE_CLIENT_EMAIL=your_client_email
 
-### AI
-- `POST /api/ai/generate` - Metin üretme
-- `POST /api/ai/check-grammar` - Dilbilgisi kontrolü
-- `POST /api/ai/analyze` - Metin analizi
-- `POST /api/ai/translate` - Metin çevirisi
+# OpenAI
+OPENAI_API_KEY=your_api_key
 
-### Admin
-- `GET /api/admin/logs` - Admin logları
-- `GET /api/admin/stats` - Sistem istatistikleri
-- `POST /api/admin/backup` - Yedekleme
-- `GET /api/admin/settings` - Sistem ayarları
+# JWT
+JWT_SECRET=your_jwt_secret
+JWT_EXPIRES_IN=24h
+```
+
+5. Veritabanını oluşturun:
+```bash
+createdb dil_ogrenme
+```
+
+6. Migration'ları çalıştırın:
+```bash
+npm run migrate:up
+```
+
+7. Uygulamayı başlatın:
+```bash
+npm run dev
+```
+
+## API Dokümantasyonu
+
+API dokümantasyonuna erişmek için:
+```
+http://localhost:3000/api-docs
+```
+
+## Test
+
+Testleri çalıştırmak için:
+```bash
+npm test
+```
 
 ## Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
-## İletişim
-
-- Website: [www.example.com](http://www.example.com)
-- Email: info@example.com
-- Twitter: [@example](https://twitter.com/example) 
+MIT 

@@ -30,11 +30,15 @@ class WordService {
     static async updateWord(id, wordData) {
         try {
             const { word, difficulty_level } = wordData;
+            if (!word || !difficulty_level) {
+                throw new Error('word ve difficulty_level zorunlu');
+            }
             const result = await pool.query(
                 'UPDATE words SET word = $1, difficulty_level = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
                 [word, difficulty_level, id]
             );
-            return result.rows[0] || null;
+            if (result.rows.length === 0) return false;
+            return true;
         } catch (error) {
             logger.error('Kelime güncelleme hatası:', error);
             throw error;
@@ -44,15 +48,18 @@ class WordService {
     static async deleteWord(id) {
         try {
             const result = await pool.query('DELETE FROM words WHERE id = $1 RETURNING *', [id]);
-            return result.rows[0] || null;
+            if (result.rows.length === 0) return false;
+            return true;
         } catch (error) {
             logger.error('Kelime silme hatası:', error);
             throw error;
         }
     }
 
-    static async getWordsByLanguage(languageId, page = 1, limit = 10, filters = {}) {
+    static async getWordsByLanguage(languageId, filters = {}) {
         try {
+            const page = parseInt(filters.page, 10) || 1;
+            const limit = parseInt(filters.limit, 10) || 10;
             const offset = (page - 1) * limit;
             let query = 'SELECT * FROM words WHERE language_id = $1';
             const queryParams = [languageId];

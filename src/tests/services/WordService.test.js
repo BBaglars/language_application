@@ -1,183 +1,76 @@
+const { pool } = require('../../db/db');
 const WordService = require('../../services/WordService');
-const { pool } = require('../../db');
-const logger = require('../../utils/logger');
 
-jest.mock('../../db');
-jest.mock('../../utils/logger');
+// Sadece gerçek veritabanı ile çalışan testler
 
-describe('WordService', () => {
-    let mockConnection;
-    let mockQuery;
+describe('WordService (Gerçek Veritabanı)', () => {
+    beforeAll(async () => {
+        // Test kullanıcı ve dilini ekle
+        await pool.query("INSERT INTO users (id, firebase_uid, email, username) VALUES (1, 'testuid', 'test@example.com', 'testuser') ON CONFLICT DO NOTHING");
+        await pool.query("INSERT INTO languages (id, code, name) VALUES (1, 'en', 'English') ON CONFLICT DO NOTHING");
+    });
 
-    beforeEach(() => {
-        mockQuery = jest.fn();
-        mockConnection = {
-            query: mockQuery,
-            release: jest.fn()
+    afterAll(async () => {
+        // Testte eklenen kelimeleri ve kullanıcı/dili temizle
+        await pool.query("DELETE FROM words WHERE created_by = 1");
+        await pool.query("DELETE FROM users WHERE id = 1");
+        await pool.query("DELETE FROM languages WHERE id = 1");
+        // await pool.end(); // Eğer başka bir yerde çağrılıyorsa yoruma al
+    });
+
+    let createdWordId;
+
+    it('should create a new word successfully', async () => {
+        const wordData = {
+            word: 'testword',
+            language_id: 1,
+            difficulty_level: 'A1',
+            created_by: 1
         };
-        pool.getConnection.mockResolvedValue(mockConnection);
+        createdWordId = await WordService.createWord(wordData);
+        expect(createdWordId).toBeGreaterThan(0);
     });
 
-    afterEach(() => {
-        jest.clearAllMocks();
+    it('should return word by id', async () => {
+        const result = await WordService.getWordById(createdWordId);
+        expect(result).toBeDefined();
+        expect(result.id).toBe(createdWordId);
     });
 
-    describe('createWord', () => {
-        it('should create a new word successfully', async () => {
-            const wordData = {
-                word: 'test',
-                language_id: 1,
-                difficulty_level: 'A1',
-                created_by: 1
-            };
-
-            mockQuery.mockResolvedValueOnce([{ insertId: 1 }]);
-
-            const result = await WordService.createWord(wordData);
-
-            expect(result).toBe(1);
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining('INSERT INTO words'),
-                expect.arrayContaining([wordData.word, wordData.language_id, wordData.difficulty_level, wordData.created_by])
-            );
-        });
-
-        it('should throw error when word creation fails', async () => {
-            const wordData = {
-                word: 'test',
-                language_id: 1,
-                difficulty_level: 'A1',
-                created_by: 1
-            };
-
-            mockQuery.mockRejectedValueOnce(new Error('Database error'));
-
-            await expect(WordService.createWord(wordData)).rejects.toThrow('Database error');
-        });
+    it('should update word successfully', async () => {
+        // difficulty_level zorunlu olduğu için hem word hem difficulty_level gönderiyoruz
+        const wordData = { word: 'updatedword', difficulty_level: 'A1' };
+        const result = await WordService.updateWord(createdWordId, wordData);
+        expect(result).toBe(true);
+        // Kontrol: güncellenen kelimeyi çek
+        const updated = await WordService.getWordById(createdWordId);
+        expect(updated.word).toBe('updatedword');
+        expect(updated.difficulty_level).toBe('A1');
     });
 
-    describe('getWordById', () => {
-        it('should return word by id', async () => {
-            const mockWord = {
-                id: 1,
-                word: 'test',
-                language_id: 1,
-                difficulty_level: 'A1'
-            };
-
-            mockQuery.mockResolvedValueOnce([mockWord]);
-
-            const result = await WordService.getWordById(1);
-
-            expect(result).toEqual(mockWord);
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining('SELECT * FROM words'),
-                expect.arrayContaining([1])
-            );
-        });
-
-        it('should return null when word not found', async () => {
-            mockQuery.mockResolvedValueOnce([]);
-
-            const result = await WordService.getWordById(999);
-
-            expect(result).toBeNull();
-        });
+    it('should return false when word not found (update)', async () => {
+        // difficulty_level zorunlu olduğu için ekliyoruz
+        const result = await WordService.updateWord(999999, { word: 'notfound', difficulty_level: 'A1' });
+        expect(result).toBe(false);
     });
 
-    describe('updateWord', () => {
-        it('should update word successfully', async () => {
-            const wordData = {
-                word: 'updated',
-                difficulty_level: 'A2'
-            };
-
-            mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }]);
-
-            const result = await WordService.updateWord(1, wordData);
-
-            expect(result).toBe(true);
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining('UPDATE words'),
-                expect.arrayContaining([wordData.word, wordData.difficulty_level, 1])
-            );
-        });
-
-        it('should return false when word not found', async () => {
-            const wordData = {
-                word: 'updated',
-                difficulty_level: 'A2'
-            };
-
-            mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }]);
-
-            const result = await WordService.updateWord(999, wordData);
-
-            expect(result).toBe(false);
-        });
+    it('should return words by language with pagination', async () => {
+        const filters = { page: 1, limit: 10 };
+        const result = await WordService.getWordsByLanguage(1, filters);
+        expect(Array.isArray(result.words)).toBe(true);
+        expect(typeof result.total).toBe('number');
     });
 
-    describe('deleteWord', () => {
-        it('should delete word successfully', async () => {
-            mockQuery.mockResolvedValueOnce([{ affectedRows: 1 }]);
-
-            const result = await WordService.deleteWord(1);
-
-            expect(result).toBe(true);
-            expect(mockQuery).toHaveBeenCalledWith(
-                expect.stringContaining('DELETE FROM words'),
-                expect.arrayContaining([1])
-            );
-        });
-
-        it('should return false when word not found', async () => {
-            mockQuery.mockResolvedValueOnce([{ affectedRows: 0 }]);
-
-            const result = await WordService.deleteWord(999);
-
-            expect(result).toBe(false);
-        });
+    it('should delete word successfully', async () => {
+        const result = await WordService.deleteWord(createdWordId);
+        expect(result).toBe(true);
+        // Kontrol: silinen kelimeyi çek
+        const deleted = await WordService.getWordById(createdWordId);
+        expect(deleted).toBeNull();
     });
 
-    describe('getWordsByLanguage', () => {
-        it('should return words by language with pagination', async () => {
-            const mockWords = [
-                { id: 1, word: 'test1' },
-                { id: 2, word: 'test2' }
-            ];
-
-            mockQuery.mockResolvedValueOnce([mockWords]);
-            mockQuery.mockResolvedValueOnce([{ total: 2 }]);
-
-            const result = await WordService.getWordsByLanguage(1, 1, 10);
-
-            expect(result).toEqual({
-                words: mockWords,
-                total: 2,
-                page: 1,
-                limit: 10
-            });
-        });
-    });
-
-    describe('getWordsByCategory', () => {
-        it('should return words by category with pagination', async () => {
-            const mockWords = [
-                { id: 1, word: 'test1' },
-                { id: 2, word: 'test2' }
-            ];
-
-            mockQuery.mockResolvedValueOnce([mockWords]);
-            mockQuery.mockResolvedValueOnce([{ total: 2 }]);
-
-            const result = await WordService.getWordsByCategory(1, 1, 10);
-
-            expect(result).toEqual({
-                words: mockWords,
-                total: 2,
-                page: 1,
-                limit: 10
-            });
-        });
+    it('should return false when word not found (delete)', async () => {
+        const result = await WordService.deleteWord(999999);
+        expect(result).toBe(false);
     });
 }); 

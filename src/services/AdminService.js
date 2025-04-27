@@ -1,58 +1,43 @@
 const Admin = require('../models/Admin');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 const { query } = require('../config/database');
 
 class AdminService {
-    static async createAdmin(adminData) {
-        try {
-            const newAdmin = await Admin.create(adminData);
-            return newAdmin;
-        } catch (error) {
-            logger.error('Admin oluşturma hatası:', error);
-            throw new Error('Admin oluşturulamadı');
-        }
+    async createAdmin({ firebaseUid, role }) {
+        const user = await User.findByFirebaseUid(firebaseUid);
+        if (!user) throw new Error('User not found');
+        const admin = new Admin({ user_id: user.id, role });
+        return await admin.save();
     }
 
-    static async getAdminById(id) {
-        try {
-            const admin = await Admin.findById(id);
-            if (!admin) {
-                throw new Error('Admin bulunamadı');
-            }
-            return admin;
-        } catch (error) {
-            logger.error('Admin getirme hatası:', error);
-            throw error;
-        }
+    async getAdmin(id) {
+        return await Admin.findById(id);
     }
 
-    static async updateAdmin(id, adminData) {
-        try {
-            const updatedAdmin = await Admin.update(id, adminData);
-            if (!updatedAdmin) {
-                throw new Error('Admin bulunamadı');
-            }
-            return updatedAdmin;
-        } catch (error) {
-            logger.error('Admin güncelleme hatası:', error);
-            throw error;
-        }
+    async getAdminByUserId(userId) {
+        return await Admin.findByUserId(userId);
     }
 
-    static async deleteAdmin(id) {
-        try {
-            const result = await Admin.delete(id);
-            if (!result) {
-                throw new Error('Admin bulunamadı');
-            }
-            return true;
-        } catch (error) {
-            logger.error('Admin silme hatası:', error);
-            throw error;
-        }
+    async updateAdmin(id, { role }) {
+        const admin = await Admin.findById(id);
+        if (!admin) throw new Error('Admin not found');
+        admin.role = role;
+        return await admin.save();
     }
 
-    static async getAdminLogs(page = 1, limit = 10) {
+    async deleteAdmin(id) {
+        const admin = await Admin.findById(id);
+        if (!admin) throw new Error('Admin not found');
+        await admin.delete();
+        return true;
+    }
+
+    async getAllAdmins() {
+        return await Admin.findAll();
+    }
+
+    async getAdminLogs(page = 1, limit = 10) {
         try {
             const offset = (page - 1) * limit;
             const logs = await query(
@@ -66,7 +51,7 @@ class AdminService {
         }
     }
 
-    static async getSystemStats() {
+    async getSystemStats() {
         try {
             const stats = await query(
                 `SELECT 
@@ -84,7 +69,7 @@ class AdminService {
         }
     }
 
-    static async createBackup() {
+    async createBackup() {
         try {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const backupPath = `backups/backup-${timestamp}.sql`;
@@ -114,7 +99,7 @@ class AdminService {
         }
     }
 
-    static async getBackupHistory() {
+    async getBackupHistory() {
         try {
             const backups = await query(
                 'SELECT * FROM backup_history ORDER BY created_at DESC'
@@ -126,7 +111,7 @@ class AdminService {
         }
     }
 
-    static async getSystemSettings() {
+    async getSystemSettings() {
         try {
             const settings = await query('SELECT * FROM system_settings');
             return settings;
@@ -136,7 +121,7 @@ class AdminService {
         }
     }
 
-    static async updateSystemSettings(settings) {
+    async updateSystemSettings(settings) {
         try {
             const connection = await require('../config/database').beginTransaction();
             
@@ -160,7 +145,7 @@ class AdminService {
         }
     }
 
-    static async logAdminAction(adminId, action, path, details = {}) {
+    async logAdminAction(adminId, action, path, details = {}) {
         try {
             await query(
                 'INSERT INTO admin_logs (admin_id, action, path, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)',
