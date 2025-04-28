@@ -42,3 +42,5 @@ Pull request'ler ve katkılar memnuniyetle karşılanır. Lütfen kodunuzu gönd
 ## Lisans
 
 MIT 
+
+![image](https://github.com/user-attachments/assets/f30c1314-a3c3-47b2-a95c-b66baddc0e6b)
