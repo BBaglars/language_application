@@ -1,9 +1,21 @@
 module.exports = {
-    testEnvironment: 'node',
-    testMatch: ['**/tests/**/*.test.js'],
-    verbose: true,
-    collectCoverage: true,
-    coverageDirectory: 'coverage',
-    coverageReporters: ['text', 'lcov'],
-    setupFilesAfterEnv: ['./src/tests/setup.js']
+  testEnvironment: 'node',
+  setupFiles: ['dotenv/config'],
+  testMatch: ['**/tests/**/*.test.js'],
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text', 'lcov'],
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/'
+  ],
+  setupFilesAfterEnv: ['./tests/setup.js'],
+  testEnvironment: 'node',
+  globals: {
+    'NODE_ENV': 'test'
+  },
+  verbose: true,
+  moduleNameMapper: {
+    '^@prisma/client$': '<rootDir>/node_modules/@prisma/client'
+  }
 }; 

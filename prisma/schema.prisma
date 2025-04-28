@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  wordProgress UserWordProgress[]
+  stories      Story[]
+  games        WordGame[]
+  gameResults  UserGameResult[]
+  scores       Game[]
+  gameResults2  GameResult[]
+}
+
+model Language {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  name        String
+  nativeName  String?
+  createdAt   DateTime  @default(now())
+  words       Word[]
+  stories     Story[]
+  games       WordGame[]
+  sentences   ExampleSentence[]
+}
+
+model Word {
+  id          Int      @id @default(autoincrement())
+  word        String
+  meaning     String
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  difficultyLevel String    @default("A1")
+  translations    Translation[]    @relation("SourceWord")
+  targetTranslations Translation[] @relation("TargetWord")
+  progress        UserWordProgress[]
+  sentences       ExampleSentence[]
+  storyWords      StoryWord[]
+  gameWords       GameWord[]
+  language        Language? @relation(fields: [languageId], references: [id])
+  languageId      Int?
+  categories      WordCategory[]
+}
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  description String?
+  words     Word[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  wordCategories WordCategory[]
+}
+
+model WordCategory {
+  id         Int      @id @default(autoincrement())
+  wordId     Int
+  categoryId Int
+  createdAt  DateTime @default(now())
+  word       Word     @relation(fields: [wordId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  @@unique([wordId, categoryId])
+}
+
+model Translation {
+  id              Int      @id @default(autoincrement())
+  sourceWordId    Int
+  targetWordId    Int
+  confidenceScore Float?
+  createdAt       DateTime @default(now())
+  sourceWord      Word     @relation("SourceWord", fields: [sourceWordId], references: [id])
+  targetWord      Word     @relation("TargetWord", fields: [targetWordId], references: [id])
+  @@unique([sourceWordId, targetWordId])
+}
+
+model UserWordProgress {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  wordId        Int
+  lastReviewed  DateTime?
+  nextReview    DateTime?
+  reviewCount   Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+  word          Word     @relation(fields: [wordId], references: [id])
+  @@unique([userId, wordId])
+}
+
+model ExampleSentence {
+  id              Int       @id @default(autoincrement())
+  wordId          Int
+  sentenceText    String
+  translation     String?
+  languageCode    String
+  difficultyLevel String    @default("A1")
+  createdAt       DateTime  @default(now())
+  word            Word      @relation(fields: [wordId], references: [id])
+  language        Language? @relation(fields: [languageId], references: [id])
+  languageId      Int?
+}
+
+model Story {
+  id              Int       @id @default(autoincrement())
+  title           String
+  content         String
+  languageCode    String
+  difficultyLevel String    @default("A1")
+  wordCount       Int?
+  createdById     Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  words           StoryWord[]
+  language        Language? @relation(fields: [languageId], references: [id])
+  languageId      Int?
+}
+
+model StoryWord {
+  id        Int      @id @default(autoincrement())
+  storyId   Int
+  wordId    Int
+  frequency Int      @default(1)
+  position  Int?
+  context   String?
+  createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id])
+  word      Word     @relation(fields: [wordId], references: [id])
+}
+
+model WordGame {
+  id              Int       @id @default(autoincrement())
+  title           String
+  gameType        String    @default("word_guess")
+  content         Json
+  languageId      Int?
+  difficultyLevel String    @default("A1")
+  createdById     Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  targetWordCount Int
+  wordList        Json
+  metadata        Json?
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  language        Language? @relation(fields: [languageId], references: [id])
+  words           GameWord[]
+  results         UserGameResult[]
+}
+
+model GameWord {
+  gameId    Int
+  wordId    Int
+  position  Int?
+  context   Json?
+  createdAt DateTime @default(now())
+  game      WordGame @relation(fields: [gameId], references: [id])
+  word      Word     @relation(fields: [wordId], references: [id])
+  @@id([gameId, wordId])
+}
+
+model UserGameResult {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  gameId           Int
+  score            Int
+  completionTime   Int?
+  correctAnswers   Int
+  totalQuestions   Int
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id])
+  game             WordGame  @relation(fields: [gameId], references: [id])
+}
+
+model Game {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  score           Int
+  totalQuestions  Int
+  correctAnswers  Int
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+}
+
+model GameResult {
+  id              Int       @id @default(autoincrement())
+  userId          Int
+  gameType        String    @default("word_match")
+  score           Int
+  totalQuestions  Int
+  correctAnswers  Int
+  durationSeconds Int?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+} 

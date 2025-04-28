@@ -1,14 +1,12 @@
-const { Pool } = require('pg');
+const { PrismaClient } = require('@prisma/client');
 
-const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/language_app?schema=public'
+    }
+  },
+  log: ['query', 'info', 'warn', 'error']
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool,
-}; 
+module.exports = prisma; 

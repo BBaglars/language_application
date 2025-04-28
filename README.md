@@ -1,98 +1,43 @@
 # Dil Öğrenme Uygulaması
 
-Bu proje, kullanıcıların yabancı dil öğrenmelerine yardımcı olan bir web uygulamasıdır.
+Kapsamlı backend ve test altyapısıyla geliştirilen bu uygulama, kullanıcıların yabancı dil öğrenme süreçlerini kolaylaştırmak için tasarlanmıştır. RESTful API mimarisiyle, kelime, kategori, çeviri ve kullanıcı yönetimi gibi temel işlevleri sunar. Proje, modern yazılım geliştirme standartlarına uygun olarak birim ve entegrasyon testleriyle güvence altına alınmıştır.
 
 ## Özellikler
 
-- Kullanıcı yönetimi ve kimlik doğrulama
-- Kelime öğrenme ve pratik yapma
-- Kategorilere göre kelime grupları
-- Oyunlar ve alıştırmalar
-- İlerleme takibi
-- Başarılar ve rozetler
-- Yapay zeka destekli öğrenme
+- **Kelime Yönetimi:** Kelime ekleme, güncelleme, silme, kategoriye ekleme ve çeviri işlemleri.
+- **Kategori Yönetimi:** Kategoriler oluşturma, güncelleme, silme ve kelimelerle ilişkilendirme.
+- **Çeviri Sistemi:** Kelimeler arası çeviri ekleme ve kaldırma.
+- **RESTful API:** Tüm işlemler için açık ve standartlara uygun uç noktalar.
+- **Test Altyapısı:** Birim ve entegrasyon testleriyle güvenli geliştirme.
+- **Gelişmiş Hata Yönetimi:** Anlaşılır ve tutarlı hata mesajları.
 
-## Kurulum
+## API Kullanımı
 
-### Gereksinimler
+Tüm uç noktalar `/api` ile başlar. Örnekler:
+- `GET /api/words` — Kelimeleri listeler
+- `POST /api/words` — Yeni kelime ekler
+- `POST /api/words/:id/categories/:categoryId` — Kelimeyi kategoriye ekler
+- `POST /api/words/:id/translations` — Kelimeye çeviri ekler
 
-- Node.js (v18 veya üzeri)
-- PostgreSQL
-- Firebase Admin SDK
-- OpenAI API
+Daha fazla detay için [API dokümantasyonuna](http://localhost:3000/api-docs) bakabilirsiniz.
 
-### Adımlar
+## Testler
 
-1. Projeyi klonlayın:
-```bash
-git clone https://github.com/kullanici/dil-ogrenme-app.git
-cd dil-ogrenme-app
-```
+Proje, **birim** ve **entegrasyon** testleriyle kapsamlı şekilde test edilmiştir.
 
-2. Bağımlılıkları yükleyin:
-```bash
-npm install
-```
-
-3. `.env` dosyasını oluşturun:
-```bash
-cp .env.example .env
-```
-
-4. `.env` dosyasını düzenleyin:
-```env
-# Uygulama
-PORT=3000
-NODE_ENV=development
-
-# PostgreSQL
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=dil_ogrenme
-DB_USER=postgres
-DB_PASSWORD=your_password
-
-# Firebase
-FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_PRIVATE_KEY=your_private_key
-FIREBASE_CLIENT_EMAIL=your_client_email
-
-# OpenAI
-OPENAI_API_KEY=your_api_key
-
-# JWT
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=24h
-```
-
-5. Veritabanını oluşturun:
-```bash
-createdb dil_ogrenme
-```
-
-6. Migration'ları çalıştırın:
-```bash
-npm run migrate:up
-```
-
-7. Uygulamayı başlatın:
-```bash
-npm run dev
-```
-
-## API Dokümantasyonu
-
-API dokümantasyonuna erişmek için:
-```
-http://localhost:3000/api-docs
-```
-
-## Test
+- **Birim Testleri:** Controller ve model fonksiyonlarının izole testleri (`tests/unit/`).
+- **Entegrasyon Testleri:** Gerçek veritabanı ve API üzerinden uçtan uca testler (`tests/integration/`).
 
 Testleri çalıştırmak için:
 ```bash
 npm test
 ```
+
+Testler Jest ile yazılmıştır ve kodun büyük bir kısmı otomatik olarak kontrol edilmektedir. Testler, hata yönetimi ve uç durumlar dahil olmak üzere tüm ana işlevleri kapsamaktadır.
+
+## Katkı ve Geliştirme
+
+Pull request'ler ve katkılar memnuniyetle karşılanır. Lütfen kodunuzu göndermeden önce testlerinizi çalıştırmayı unutmayın.
 
 ## Lisans
 
