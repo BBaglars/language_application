@@ -39,7 +39,6 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
-        
         const user = await prisma.user.findUnique({
             where: { email },
             select: {
@@ -49,21 +48,29 @@ router.post('/login', async (req, res) => {
                 password: true
             }
         });
-        
+
         if (!user) {
             return res.status(401).json({ error: 'Geçersiz kimlik bilgileri' });
         }
-        
+
         const isValidPassword = await bcrypt.compare(password, user.password);
-        
+
         if (!isValidPassword) {
             return res.status(401).json({ error: 'Geçersiz kimlik bilgileri' });
         }
-        
+
+        // JWT token oluştur
+        const jwt = require('jsonwebtoken');
+        const token = jwt.sign(
+            { id: user.id, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: '1d' }
+        );
+
         // Şifreyi yanıttan çıkar
         const { password: _, ...userWithoutPassword } = user;
-        
-        res.json(userWithoutPassword);
+
+        res.json({ user: userWithoutPassword, token });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }

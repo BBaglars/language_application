@@ -10,7 +10,7 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  password  String
+  password_hash  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   wordProgress UserWordProgress[]

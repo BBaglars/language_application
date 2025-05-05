@@ -1,17 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const wordController = require('../controllers/wordController');
+const WordController = require('../controllers/wordController');
 
-router.get('/', wordController.getWords);
-router.post('/', wordController.createWord);
-router.get('/:id', wordController.getWordById);
-router.put('/:id', wordController.updateWord);
-router.delete('/:id', wordController.deleteWord);
-router.get('/:id/categories', wordController.getWordCategories);
-router.post('/:id/categories/:categoryId', wordController.addWordToCategory);
-router.delete('/:id/categories/:categoryId', wordController.removeWordFromCategory);
-router.get('/:id/translations', wordController.getWordTranslations);
-router.post('/:id/translations', wordController.addTranslation);
-router.delete('/:id/translations/:translationId', wordController.removeTranslation);
+// Tüm kelimeleri getir ve ana route
+router.get('/', WordController.getWords);
+
+// Yeni kelime ekle
+router.post('/', WordController.createWord);
+
+// Kelime detayını getir
+router.get('/:id', WordController.getWordById);
+
+// Kelime güncelle
+router.put('/:id', WordController.updateWord);
+
+// Kelime sil
+router.delete('/:id', WordController.deleteWord);
+
+// Kelimenin kategorilerini getir
+router.get('/:id/categories', WordController.getWordCategories);
+
+// Kelimeye kategori ekle
+router.post('/:id/categories/:categoryId', WordController.addWordToCategory);
+
+// Kelimeden kategori kaldır
+router.delete('/:id/categories/:categoryId', WordController.removeWordFromCategory);
+
+// Kelimenin çevirilerini getir
+router.get('/:id/translations', WordController.getWordTranslations);
+
+// Kelimeye çeviri ekle
+router.post('/:id/translations', WordController.addTranslation);
+
+// Kelimeden çeviri kaldır
+router.delete('/:id/translations/:translationId', WordController.removeTranslation);
 
 module.exports = router; 

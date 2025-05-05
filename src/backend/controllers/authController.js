@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../config/database');
+const { pool } = require('../db');
 const { ValidationError, UnauthorizedError } = require('../utils/errors');
 
 class AuthController {
@@ -8,27 +8,28 @@ class AuthController {
     try {
       const { email, password, name } = req.body;
 
-      const existingUser = await prisma.user.findUnique({
-        where: { email }
-      });
+      // Kullanıcıyı kontrol et
+      const { rows: existingUsers } = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
 
-      if (existingUser) {
+      if (existingUsers.length > 0) {
         throw new ValidationError('Bu email adresi zaten kullanımda');
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const user = await prisma.user.create({
-        data: {
-          email,
-          password: hashedPassword,
-          name
-        }
-      });
+      const { rows } = await pool.query(
+        'INSERT INTO users (email, password_hash, username) VALUES ($1, $2, $3) RETURNING id, email, username',
+        [email, hashedPassword, name]
+      );
+
+      const user = rows[0];
 
       const token = jwt.sign(
         { id: user.id, email: user.email },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET || 'gizli-anahtar',
         { expiresIn: '24h' }
       );
 
@@ -36,7 +37,7 @@ class AuthController {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name
+          username: user.username
         },
         token
       });
@@ -49,23 +50,35 @@ class AuthController {
     try {
       const { email, password } = req.body;
 
-      const user = await prisma.user.findUnique({
-        where: { email }
-      });
+      if (!email || !password) {
+        throw new ValidationError('Email ve şifre gereklidir');
+      }
 
-      if (!user) {
+      // Kullanıcıyı bul
+      const { rows } = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (rows.length === 0) {
         throw new UnauthorizedError('Geçersiz email veya şifre');
       }
 
-      const isValidPassword = await bcrypt.compare(password, user.password);
+      const user = rows[0];
 
+      // Şifreyi kontrol et
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
         throw new UnauthorizedError('Geçersiz email veya şifre');
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email },
-        process.env.JWT_SECRET,
+        { 
+          id: user.id, 
+          email: user.email,
+          username: user.username
+        },
+        process.env.JWT_SECRET || 'gizli-anahtar',
         { expiresIn: '24h' }
       );
 
@@ -73,12 +86,17 @@ class AuthController {
         user: {
           id: user.id,
           email: user.email,
-          name: user.name
+          username: user.username
         },
         token
       });
     } catch (error) {
-      next(error);
+      console.error('Login hatası:', error);
+      if (error instanceof ValidationError || error instanceof UnauthorizedError) {
+        next(error);
+      } else {
+        next(new Error('Giriş işlemi sırasında bir hata oluştu'));
+      }
     }
   }
 }

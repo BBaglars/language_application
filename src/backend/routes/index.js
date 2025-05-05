@@ -17,4 +17,20 @@ router.use('/categories', categoryRoutes);
 router.use('/games', gameRoutes);
 router.use('/stories', storyRoutes);
 
+// Ana route'u tanımla
+router.get('/', (req, res) => {
+  res.json({
+    message: 'API çalışıyor',
+    endpoints: {
+      auth: '/api/auth',
+      users: '/api/users',
+      words: '/api/words',
+      categories: '/api/categories',
+      games: '/api/games',
+      stories: '/api/stories'
+    }
+  });
+});
+
+// Router'ı dışa aktar
 module.exports = router; 

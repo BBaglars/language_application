@@ -1,19 +1,83 @@
 const { pool } = require('../db');
 const { AppError } = require('../utils/errors');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 class UserController {
   static async createUser(req, res, next) {
+    console.log('Register endpoint çağrıldı');
     try {
       const { username, email, password } = req.body;
       
+      // Şifreyi hashle
+      const hashedPassword = await bcrypt.hash(password, 10);
+      
       const { rows } = await pool.query(
-        'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email',
-        [username, email, password]
+        'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id, username, email',
+        [username, email, hashedPassword]
       );
       
+      console.log('Kullanıcı başarıyla eklendi:', rows[0]);
       res.status(201).json(rows[0]);
     } catch (error) {
+      console.error('Register endpoint hatası:', error);
       next(new AppError(error.message, 400));
+    }
+  }
+
+  static async login(req, res, next) {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        throw new AppError('Email ve şifre gereklidir', 400);
+      }
+
+      // Kullanıcıyı bul
+      const { rows } = await pool.query(
+        'SELECT * FROM users WHERE email = $1',
+        [email]
+      );
+
+      if (rows.length === 0) {
+        throw new AppError('Kullanıcı bulunamadı', 404);
+      }
+
+      const user = rows[0];
+
+      // Şifreyi kontrol et
+      const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+      if (!isPasswordValid) {
+        throw new AppError('Geçersiz şifre', 401);
+      }
+
+      // JWT token oluştur
+      const token = jwt.sign(
+        { 
+          id: user.id,
+          email: user.email,
+          username: user.username
+        },
+        process.env.JWT_SECRET || 'gizli-anahtar',
+        { expiresIn: '1d' }
+      );
+
+      // Kullanıcı bilgilerini ve token'ı döndür
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        },
+        token
+      });
+    } catch (error) {
+      console.error('Login hatası:', error);
+      if (error instanceof AppError) {
+        next(error);
+      } else {
+        next(new AppError('Giriş işlemi sırasında bir hata oluştu', 500));
+      }
     }
   }
 
@@ -54,7 +118,7 @@ class UserController {
       }
 
       if (password) {
-        updateQuery += `password = $${paramCount}, `;
+        updateQuery += `password_hash = $${paramCount}, `;
         queryParams.push(password);
         paramCount++;
       }

@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+const { pool } = require('../db');
 const { AppError } = require('../utils/errors');
 const Word = require('../models/word');
 

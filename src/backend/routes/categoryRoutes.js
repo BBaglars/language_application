@@ -10,7 +10,7 @@ const {
     getCategoryWords
 } = require('../controllers/categoryController');
 
-// Tüm kategorileri getir
+// Tüm kategorileri getir ve ana route
 router.get('/', getAllCategories);
 
 // Kategori detayını getir

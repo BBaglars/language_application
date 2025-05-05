@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const userController = require('../controllers/userController');
+const UserController = require('../controllers/userController');
 
 // Kimlik doğrulama işlemleri
-router.post('/register', userController.createUser);
+router.post('/register', UserController.createUser);
+router.post('/login', UserController.login);
 
 module.exports = router; 

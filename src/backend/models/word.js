@@ -1,4 +1,4 @@
-const { pool } = require('../config/database');
+const { pool } = require('../db');
 
 class Word {
   static async create({ word, meaning, languageId, difficultyLevel }) {
