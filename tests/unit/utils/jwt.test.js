@@ -1,53 +1,84 @@
 const jwt = require('jsonwebtoken');
-const { generateToken, verifyToken } = require('../../../src/backend/utils/jwt');
+const { generateToken, verifyToken } = require('../../../backend/utils/jwt.js');
 
-jest.mock('jsonwebtoken');
+jest.mock('jsonwebtoken', () => ({
+    sign: jest.fn(),
+    verify: jest.fn()
+}));
 
 describe('JWT Utils Tests', () => {
-  beforeEach(() => {
-    process.env.JWT_SECRET = 'test-secret';
-    jest.clearAllMocks();
-  });
-
-  describe('generateToken', () => {
-    it('doğru parametrelerle token oluşturmalı', () => {
-      const userId = 1;
-      const expectedToken = 'mock-token';
-      jwt.sign.mockReturnValue(expectedToken);
-
-      const token = generateToken(userId);
-
-      expect(jwt.sign).toHaveBeenCalledWith(
-        { id: userId },
-        process.env.JWT_SECRET,
-        { expiresIn: '30d' }
-      );
-      expect(token).toBe(expectedToken);
-    });
-  });
-
-  describe('verifyToken', () => {
-    it('geçerli token için doğru sonuç dönmeli', () => {
-      const token = 'valid-token';
-      const expectedPayload = { id: 1 };
-      jwt.verify.mockReturnValue(expectedPayload);
-
-      const result = verifyToken(token);
-
-      expect(jwt.verify).toHaveBeenCalledWith(token, process.env.JWT_SECRET);
-      expect(result).toEqual(expectedPayload);
+    beforeEach(() => {
+        process.env.JWT_SECRET = 'test-secret';
+        jest.clearAllMocks();
     });
 
-    it('geçersiz token için null dönmeli', () => {
-      const token = 'invalid-token';
-      jwt.verify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
+    describe('generateToken', () => {
+        it('should generate a valid JWT token', () => {
+            const mockToken = 'mock.jwt.token';
+            jwt.sign.mockReturnValue(mockToken);
 
-      const result = verifyToken(token);
+            const userId = 1;
+            const token = generateToken(userId);
 
-      expect(jwt.verify).toHaveBeenCalledWith(token, process.env.JWT_SECRET);
-      expect(result).toBeNull();
+            expect(jwt.sign).toHaveBeenCalledWith(
+                { id: userId },
+                'test-secret',
+                { expiresIn: '30d' }
+            );
+            expect(token).toBe(mockToken);
+        });
+
+        it('should use default secret if JWT_SECRET is not set', () => {
+            delete process.env.JWT_SECRET;
+            const mockToken = 'mock.jwt.token';
+            jwt.sign.mockReturnValue(mockToken);
+
+            const userId = 1;
+            const token = generateToken(userId);
+
+            expect(jwt.sign).toHaveBeenCalledWith(
+                { id: userId },
+                'test-secret',
+                { expiresIn: '30d' }
+            );
+            expect(token).toBe(mockToken);
+        });
     });
-  });
+
+    describe('verifyToken', () => {
+        it('should verify a valid token', () => {
+            const mockPayload = { id: 1 };
+            jwt.verify.mockReturnValue(mockPayload);
+
+            const token = 'valid.jwt.token';
+            const result = verifyToken(token);
+
+            expect(jwt.verify).toHaveBeenCalledWith(token, 'test-secret');
+            expect(result).toEqual(mockPayload);
+        });
+
+        it('should return null for invalid token', () => {
+            jwt.verify.mockImplementation(() => {
+                throw new Error('Invalid token');
+            });
+
+            const token = 'invalid.jwt.token';
+            const result = verifyToken(token);
+
+            expect(jwt.verify).toHaveBeenCalledWith(token, 'test-secret');
+            expect(result).toBeNull();
+        });
+
+        it('should use default secret if JWT_SECRET is not set', () => {
+            delete process.env.JWT_SECRET;
+            const mockPayload = { id: 1 };
+            jwt.verify.mockReturnValue(mockPayload);
+
+            const token = 'valid.jwt.token';
+            const result = verifyToken(token);
+
+            expect(jwt.verify).toHaveBeenCalledWith(token, 'test-secret');
+            expect(result).toEqual(mockPayload);
+        });
+    });
 }); 

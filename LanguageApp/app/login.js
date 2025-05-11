@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import axios from 'axios';
+import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import { useRouter } from "expo-router";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 Alert.alert('app/login.js', 'Bu dosya render edildi!');
 
@@ -20,40 +21,33 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      console.log('Login isteği gönderiliyor...');
-      const response = await axios.post('http://192.168.70.34:3000/api/auth/login', {
-        email,
-        password,
-      }, { 
-        timeout: 10000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Sadece Firebase Authentication ile giriş yap
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-      console.log('Sunucu yanıtı:', response.data);
+      // Kullanıcı bilgilerini AsyncStorage'a kaydet
+      await AsyncStorage.setItem('userData', JSON.stringify({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName
+      }));
 
-      if (response.data && response.data.token) {
-        await AsyncStorage.setItem('userToken', response.data.token);
-        await AsyncStorage.setItem('userData', JSON.stringify(response.data.user));
-        Alert.alert('Başarılı', 'Giriş başarılı!');
-        router.replace("/home");
-      } else {
-        Alert.alert('Hata', 'Giriş başarısız: Geçersiz yanıt');
-      }
+      Alert.alert('Başarılı', 'Giriş başarılı!');
+      router.replace("/home");
     } catch (error) {
-      console.log('Hata detayı:', error);
-      if (error.response) {
-        console.log('Sunucu yanıtı:', error.response.data);
-        const errorMessage = error.response.data?.error || error.response.data?.message || 'Giriş başarısız';
-        Alert.alert('Hata', errorMessage);
-      } else if (error.request) {
-        console.log('İstek hatası:', error.request);
-        Alert.alert('Hata', 'Sunucuya bağlanılamadı. Lütfen internet bağlantınızı kontrol edin.');
-      } else {
-        console.log('Diğer hata:', error.message);
-        Alert.alert('Hata', 'Beklenmeyen bir hata oluştu: ' + error.message);
+      let errorMessage = 'Giriş başarısız';
+      
+      if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz email adresi';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'Kullanıcı bulunamadı';
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Hatalı şifre';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin';
       }
+
+      Alert.alert('Hata', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -79,35 +73,52 @@ export default function LoginScreen() {
         secureTextEntry
         editable={!loading}
       />
-      <Button 
-        title={loading ? "GİRİŞ YAPILIYOR..." : "GİRİŞ YAP"} 
+      <Button
+        title={loading ? "GİRİŞ YAPILIYOR..." : "GİRİŞ YAP"}
         onPress={handleLogin}
         disabled={loading}
       />
+
+      <TouchableOpacity 
+        style={styles.registerLink}
+        onPress={() => router.push("/register")}
+      >
+        <Text style={styles.registerLinkText}>
+          Hesabınız yok mu? Kayıt olun
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    justifyContent: 'center', 
+  container: {
+    flex: 1,
+    justifyContent: 'center',
     padding: 20,
     backgroundColor: '#fff'
   },
-  title: { 
-    fontSize: 24, 
-    marginBottom: 20, 
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
     textAlign: 'center',
     fontWeight: 'bold',
     color: '#333'
   },
-  input: { 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    padding: 15, 
-    marginBottom: 15, 
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    padding: 15,
+    marginBottom: 15,
     borderRadius: 8,
     fontSize: 16
   },
+  registerLink: {
+    marginTop: 15,
+    alignItems: 'center'
+  },
+  registerLinkText: {
+    color: '#007AFF',
+    fontSize: 16
+  }
 });

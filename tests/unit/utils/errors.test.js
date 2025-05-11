@@ -6,7 +6,7 @@ const {
   NotFoundError,
   ConflictError,
   DatabaseError
-} = require('../../../src/backend/utils/errors');
+} = require('../../../backend/utils/errors');
 
 describe('Error Classes Tests', () => {
   describe('AppError', () => {
