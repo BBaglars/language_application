@@ -1,0 +1,8 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="80" cy="80" rx="70" ry="55" fill="#ff9a9e"/>
+  <ellipse cx="80" cy="80" rx="56" ry="44" fill="#fff"/>
+  <path d="M80 55 L95 95 L70 95 L90 130" stroke="#ff7e5f" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <circle cx="110" cy="70" r="10" fill="#a1c4fd"/>
+  <rect x="60" y="120" width="40" height="12" rx="6" fill="#fbc2eb"/>
+  <text x="80" y="155" text-anchor="middle" font-size="22" font-family="Arial" fill="#3a3a3a" font-weight="bold">LingoSpark</text>
+</svg> 

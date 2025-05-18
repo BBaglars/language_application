@@ -62,16 +62,16 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', routes);
 
-// Route'ları kullan
-app.use('/api/users', userRoutes);
-app.use('/api/languages', languageRoutes);
-app.use('/api/words', wordRoutes);
-app.use('/api/translations', translationRoutes);
-app.use('/api/language-pairs', languagePairRoutes);
-app.use('/api/stories', storyRoutes);
-app.use('/api/story-generation-criteria', storyGenerationCriteriaRoutes);
-app.use('/api/games', gameRoutes);
-app.use('/api/user-word-progress', userWordProgressRoutes);
+// Diğer route eklemeleri yoruma alındı
+// app.use('/api/users', userRoutes);
+// app.use('/api/languages', languageRoutes);
+// app.use('/api/words', wordRoutes);
+// app.use('/api/translations', translationRoutes);
+// app.use('/api/language-pairs', languagePairRoutes);
+// app.use('/api/stories', storyRoutes);
+// app.use('/api/story-generation-criteria', storyGenerationCriteriaRoutes);
+// app.use('/api/games', gameRoutes);
+// app.use('/api/user-word-progress', userWordProgressRoutes);
 
 // 404 handler
 app.use((req, res) => {

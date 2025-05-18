@@ -7,7 +7,7 @@ const { createLanguageSchema, updateLanguageSchema } = require('../validations/l
 const router = express.Router();
 
 // Tüm route'lar için authentication gerekli
-router.use(authenticate);
+// router.use(authenticate); // Geliştirme için geçici olarak yoruma alındı
 
 // Dil işlemleri
 router.get('/', LanguageController.getAllLanguages);

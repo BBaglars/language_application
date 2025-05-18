@@ -1,19 +1,20 @@
 {
   "expo": {
-    "name": "LanguageApp",
-    "slug": "LanguageApp",
+    "name": "LingoSpark",
+    "slug": "lingospark",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "languageapp",
+    "icon": "./assets/lingospark-logo.png",
+    "scheme": "lingospark",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true
     },
     "android": {
+      "package": "com.berkay.languageapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/lingospark-logo.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true
@@ -21,22 +22,25 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/lingospark-logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/lingospark-logo.svg",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
       ]
     ],
-    "experiments": {
-      "typedRoutes": true
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1d12f1a9-9768-4fa1-b0bb-bfdfd4d97662"
+      }
     }
   }
 }
