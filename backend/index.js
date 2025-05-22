@@ -1,6 +1,6 @@
 require('dotenv/config');
 const app = require('./app');
-const { logger } = require('./utils/logger.js');
+const logger = require('./utils/logger.js');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ prisma.$connect()
     });
   })
   .catch((error) => {
-    logger.error('Veritabanı bağlantı hatası:', error);
+    logger.error(`Veritabanı bağlantı hatası: ${error && error.stack ? error.stack : JSON.stringify(error)}`);
     process.exit(1);
   });
 

@@ -47,17 +47,4 @@ if (process.env.NODE_ENV === 'development') {
   }));
 }
 
-function info(message, metadata) {
-  console.log(`[${new Date().toISOString()}] [INFO] ${message}${metadata ? ' ' + JSON.stringify(metadata) : ''}`);
-}
-function error(message, err, metadata) {
-  console.log(`[${new Date().toISOString()}] [ERROR] ${message}${err ? ' ' + err.stack : ''}${metadata ? ' ' + JSON.stringify(metadata) : ''}`);
-}
-function warn(message, metadata) {
-  console.log(`[${new Date().toISOString()}] [WARN] ${message}${metadata ? ' ' + JSON.stringify(metadata) : ''}`);
-}
-function debug(message, metadata) {
-  console.log(`[${new Date().toISOString()}] [DEBUG] ${message}${metadata ? ' ' + JSON.stringify(metadata) : ''}`);
-}
-
-module.exports = { logger }; 
+module.exports = logger; 

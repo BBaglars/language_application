@@ -8,7 +8,7 @@ const router = express.Router();
 const wordController = new WordController();
 
 // Tüm route'lar için authentication gerekli
-// router.use(authenticate); // Geliştirme için geçici olarak yoruma alındı
+router.use(authenticate);
 
 // Kelime işlemleri
 router.get('/', wordController.getWords);

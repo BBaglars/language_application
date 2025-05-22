@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
-import axios from 'axios';
+import api from '../../../api';
 import { Picker } from '@react-native-picker/picker';
 
 const API_URL = 'http://localhost:3000/api';
@@ -24,8 +24,8 @@ export default function WordForm() {
     try {
       setLoading(true);
       const [langRes, catRes] = await Promise.all([
-        axios.get(`${API_URL}/languages`),
-        axios.get(`${API_URL}/categories`)
+        api.get(`/languages`),
+        api.get(`/categories`)
       ]);
       console.log('LANGUAGES API RESPONSE:', JSON.stringify(langRes.data, null, 2));
       console.log('CATEGORIES API RESPONSE:', JSON.stringify(catRes.data, null, 2));
@@ -51,11 +51,11 @@ export default function WordForm() {
         difficultyLevel,
         languageId: Number(languageId)
       };
-      const wordRes = await axios.post(`${API_URL}/words`, payload);
+      const wordRes = await api.post('/words', payload);
       const wordId = wordRes.data?.data?.word?.id;
       if (wordId && categoryId) {
         try {
-          await axios.post(`${API_URL}/words/${wordId}/categories/${categoryId}`);
+          await api.post(`/words/${wordId}/categories/${categoryId}`);
         } catch (catErr) {
           Alert.alert('Uyarı', 'Kelime eklendi fakat kategoriye eklenemedi.');
         }

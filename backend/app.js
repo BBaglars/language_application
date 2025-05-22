@@ -7,10 +7,11 @@ const { PrismaClient } = require('@prisma/client');
 const { errorHandler } = require('./middleware/error.middleware.js');
 const responseMiddleware = require('./middleware/response.middleware.js');
 const routes = require('./routes/index.js');
-const { logger } = require('./utils/logger.js');
+const logger = require('./utils/logger.js');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { AppError } = require('./utils/errors.js');
+const statsRoutes = require('./routes/stats');
 
 // Route'ları import et
 const userRoutes = require('./routes/user.routes.js');
@@ -22,6 +23,7 @@ const storyRoutes = require('./routes/story.routes.js');
 const storyGenerationCriteriaRoutes = require('./routes/storyGenerationCriteria.routes.js');
 const gameRoutes = require('./routes/game.routes.js');
 const userWordProgressRoutes = require('./routes/userWordProgress.routes.js');
+const gameWordsRoutes = require('./routes/game-words');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -50,17 +52,13 @@ if (process.env.NODE_ENV !== 'test') {
 
 // Request logging
 app.use((req, res, next) => {
-  logger.info({
-    method: req.method,
-    url: req.url,
-    ip: req.ip,
-    user: req.user?.id
-  });
+  logger.info(`${req.method} ${req.url} - ip: ${req.ip} - user: ${req.user?.id || 'anon'}`);
   next();
 });
 
 // Routes
 app.use('/api', routes);
+app.use('/api/stats', statsRoutes);
 
 // Diğer route eklemeleri yoruma alındı
 // app.use('/api/users', userRoutes);
@@ -72,6 +70,7 @@ app.use('/api', routes);
 // app.use('/api/story-generation-criteria', storyGenerationCriteriaRoutes);
 // app.use('/api/games', gameRoutes);
 // app.use('/api/user-word-progress', userWordProgressRoutes);
+app.use('/api/game-words', gameWordsRoutes);
 
 // 404 handler
 app.use((req, res) => {

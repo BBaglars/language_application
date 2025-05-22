@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/api';
+import api from '../../../api';
 
 export default function LanguageForm() {
   const [name, setName] = useState('');
@@ -16,11 +14,11 @@ export default function LanguageForm() {
     }
     try {
       setLoading(true);
-      await axios.post(`${API_URL}/languages`, { name, code });
+      await api.post('/languages', { name, code });
       Alert.alert('Başarılı', 'Dil eklendi!');
       setName(''); setCode('');
     } catch (e) {
-      Alert.alert('Hata', 'Dil eklenemedi.');
+      Alert.alert('Hata', e?.response?.data?.message || 'Dil eklenemedi.');
     } finally {
       setLoading(false);
     }

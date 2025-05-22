@@ -2,16 +2,21 @@ const { AppError, ValidationError, AuthenticationError } = require('../utils/err
 const { logger } = require('../utils/logger.js');
 
 const errorHandler = (err, req, res, next) => {
+  // Hata detayını doğrudan terminale bas
+  console.error('DETAYLI HATA:', err);
   // Hata logla
   logger.error({
     error: err.message,
+    name: err.name,
+    code: err.code,
     stack: err.stack,
     path: req.path,
     method: req.method,
     body: req.body,
     params: req.params,
     query: req.query,
-    user: req.user?.id
+    user: req.user?.id,
+    fullError: JSON.stringify(err, Object.getOwnPropertyNames(err))
   });
 
   // ValidationError ise

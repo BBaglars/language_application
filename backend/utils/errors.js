@@ -1,4 +1,4 @@
-const { logger } = require('./logger.js');
+const logger = require('./logger.js');
 
 // Temel hata sınıfı
 class AppError extends Error {
@@ -106,12 +106,12 @@ class CacheError extends AppError {
 
 // İşlenmeyen hataları yakala
 process.on('unhandledRejection', (err) => {
-  logger.error('İşlenmeyen Promise Reddi:', err);
+  logger.error(`İşlenmeyen Promise Reddi: ${err && err.stack ? err.stack : JSON.stringify(err)}`);
   process.exit(1);
 });
 
 process.on('uncaughtException', (err) => {
-  logger.error('Yakalanmamış Hata:', err);
+  logger.error(`Yakalanmamış Hata: ${err && err.stack ? err.stack : JSON.stringify(err)}`);
   process.exit(1);
 });
 

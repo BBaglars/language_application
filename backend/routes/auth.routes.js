@@ -5,6 +5,7 @@ const { registerSchema, loginSchema } = require('../validations/auth.validation.
 const { PrismaClient } = require('@prisma/client');
 const { auth } = require('../config/firebase');
 const prisma = new PrismaClient();
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -18,32 +19,31 @@ router.post('/google-login', async (req, res) => {
   try {
     const { firebaseId, email, name, photoURL } = req.body;
 
-    // Firebase token'ını doğrula
-    const decodedToken = await auth.verifyIdToken(firebaseId);
-    if (!decodedToken) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Geçersiz Firebase token'
-      });
-    }
-
-    // Kullanıcıyı veritabanında ara veya oluştur
-    let user = await prisma.user.findUnique({
-      where: { firebaseId }
-    });
+    // Kullanıcıyı önce firebaseId ile bul
+    let user = await prisma.user.findUnique({ where: { firebaseId } });
 
     if (!user) {
-      // Yeni kullanıcı oluştur
-      user = await prisma.user.create({
-        data: {
-          firebaseId,
-          email,
-          name,
-          role: 'USER'
-        }
-      });
+      // firebaseId ile bulamazsa email ile bul
+      user = await prisma.user.findUnique({ where: { email } });
+      if (user) {
+        // Email ile bulursa firebaseId'yi güncelle
+        user = await prisma.user.update({
+          where: { email },
+          data: { firebaseId, name, photoURL }
+        });
+      } else {
+        // Hiçbiri yoksa yeni kullanıcı oluştur
+        user = await prisma.user.create({
+          data: { firebaseId, email, name, photoURL, role: 'USER' }
+        });
+      }
     }
 
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
     res.json({
       status: 'success',
       data: {
@@ -51,8 +51,10 @@ router.post('/google-login', async (req, res) => {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role
-        }
+          role: user.role,
+          firebaseId: user.firebaseId
+        },
+        token
       }
     });
   } catch (error) {
@@ -61,6 +63,45 @@ router.post('/google-login', async (req, res) => {
       status: 'error',
       message: 'Giriş işlemi sırasında bir hata oluştu'
     });
+  }
+});
+
+/**
+ * GEÇİCİ ÇÖZÜM: Mobilde e-posta ile giriş için kullanılır.
+ * E-posta ile gelen kullanıcıyı veritabanında arar ve Google login ile dönen bilgileri döner.
+ * İLERİDE GOOGLE İLE GİRİŞ TAMAMEN ENTEGRE EDİLDİĞİNDE BU ENDPOINT KALDIRILACAKTIR!
+ */
+router.post('/email-login', async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ success: false, message: 'E-posta zorunlu!' });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      // JWT token oluştur
+      const token = jwt.sign(
+        { userId: user.id, email: user.email, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      return res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          photoURL: user.photoURL,
+          firebaseId: user.firebaseId,
+          role: user.role
+        },
+        token
+      });
+    } else {
+      return res.status(404).json({ success: false, message: 'Kullanıcı bulunamadı!' });
+    }
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Sunucu hatası!' });
   }
 });
 

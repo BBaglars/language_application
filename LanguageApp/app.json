@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "LingoSpark",
-    "slug": "lingospark",
+    "slug": "LanguageApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/lingospark-logo.png",
@@ -29,7 +29,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/lingospark-logo.svg",
+          "image": "./assets/lingospark-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"

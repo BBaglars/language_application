@@ -19,7 +19,7 @@ const authenticate = async (req, res, next) => {
 
         // Kullanıcı kontrolü
         const user = await prisma.user.findUnique({
-            where: { id: decoded.id }
+            where: { id: decoded.id || decoded.userId }
         });
 
         if (!user) {

@@ -7,7 +7,7 @@ const { createCategorySchema, updateCategorySchema } = require('../validations/c
 const router = express.Router();
 
 // Tüm route'lar için authentication gerekli
-// router.use(authenticate); // Geliştirme için geçici olarak yoruma alındı
+router.use(authenticate);
 
 // Kategori işlemleri
 router.get('/', CategoryController.getAllCategories);

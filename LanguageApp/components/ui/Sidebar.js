@@ -2,23 +2,31 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
+import { useColorScheme as useDeviceColorScheme } from 'react-native';
+import { useUser } from '../../context/UserContext';
 
-const ACCENT = '#4F46E5';
+const ACCENT = '#7C3AED';
 
 const menuItems = [
-  { label: 'Ana Sayfa', route: '/home' },
-  { label: 'Oyunlar', route: '/games' },
-  { label: 'Kelime Listem', route: '/words' },
-  { label: 'Hikayeler', route: '/stories' },
-  { label: 'İstatistikler', route: '/stats' },
-  { label: 'Ayarlar', route: '/settings' },
+  { label: 'Ana Sayfa', route: '/home', icon: 'home' },
+  { label: 'Oyunlar', route: '/games', icon: 'sports-esports', isNew: true },
+  { label: 'Kelime Listem', route: '/words', icon: 'list' },
+  { label: 'Hikayeler', route: '/stories', icon: 'menu-book' },
+  { label: 'İstatistikler', route: '/stats', icon: 'bar-chart' },
+  { label: 'Ayarlar', route: '/settings', icon: 'settings' },
 ];
 
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [hovered, setHovered] = useState(null);
+  const { theme } = useTheme();
+  const deviceColorScheme = useDeviceColorScheme();
+  const colorScheme = theme === 'system' ? deviceColorScheme : theme;
+  const isDark = colorScheme === 'dark';
   const isWeb = Platform.OS === 'web';
+  const { user, logout } = useUser ? useUser() : { user: null, logout: () => {} };
 
   // Aktif menü kontrolü için fonksiyon
   function isActive(route) {
@@ -26,48 +34,53 @@ export default function Sidebar() {
   }
 
   return (
-    <View style={styles.sidebar}>
+    <View style={[styles.sidebar, isDark && styles.sidebarDark]}>
+      <View style={styles.profileArea}>
+        <View style={styles.avatarCircle}>
+          {user?.photoURL ? (
+            <img src={user.photoURL} alt="avatar" style={{ width: 54, height: 54, borderRadius: 27 }} />
+          ) : (
+            <Text style={styles.avatarText}>{user?.name ? user.name[0].toUpperCase() : 'K'}</Text>
+          )}
+        </View>
+        <Text style={styles.profileName}>{user?.name || 'Kullanıcı'}</Text>
+      </View>
+      <View style={styles.divider} />
       {menuItems.map((item, idx) => {
-        const isActive = pathname.startsWith(item.route);
+        const active = isActive(item.route);
         const isHover = hovered === idx;
         return (
           <TouchableOpacity
             key={item.route}
             style={[
               styles.menuItem,
-              isActive && styles.activeMenu,
-              !isActive && isHover && styles.hoverMenu,
+              active && styles.activeMenu,
+              !active && isHover && styles.hoverMenu,
             ]}
             onPress={() => router.push(item.route)}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
             {...(isWeb && {
               onMouseEnter: () => setHovered(idx),
               onMouseLeave: () => setHovered(null),
             })}
           >
-            {isActive && <View style={styles.accentBar} />}
-            <Text style={[
-              styles.menuText,
-              isActive && styles.activeText,
-              !isActive && isHover && styles.hoverText,
-            ]}>{item.label}</Text>
+            <MaterialIcons name={item.icon} size={24} color={active ? '#fff' : ACCENT} style={{ marginRight: 12 }} />
+            <Text style={[styles.menuText, active && styles.activeText, !active && isHover && styles.hoverText]}>{item.label}</Text>
+            {item.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Yeni</Text></View>}
           </TouchableOpacity>
         );
       })}
+      {/* Çıkış Yap butonu */}
       <TouchableOpacity
-        style={[styles.menuItem, isActive('/(tabs)/games')]}
-        onPress={() => router.push('/(tabs)/games')}
+        style={styles.logoutBtn}
+        onPress={async () => {
+          await logout();
+          router.replace('/login');
+        }}
+        activeOpacity={0.88}
       >
-        <MaterialIcons name="sports-esports" size={22} color={isActive('/(tabs)/games') ? '#4F46E5' : '#888'} />
-        <Text style={[styles.menuText, isActive('/(tabs)/games') && styles.menuTextActive]}>Oyunlar</Text>
-      </TouchableOpacity>
-      {/* Admin Paneli */}
-      <TouchableOpacity
-        style={[styles.menuItem, isActive('/(tabs)/admin')]}
-        onPress={() => router.push('/(tabs)/admin')}
-      >
-        <MaterialIcons name="admin-panel-settings" size={22} color={isActive('/(tabs)/admin') ? '#4F46E5' : '#888'} />
-        <Text style={[styles.menuText, isActive('/(tabs)/admin') && styles.menuTextActive]}>Admin Paneli</Text>
+        <MaterialIcons name="logout" size={22} color="#ef4444" style={{ marginRight: 10 }} />
+        <Text style={styles.logoutText}>Çıkış Yap</Text>
       </TouchableOpacity>
     </View>
   );
@@ -75,65 +88,124 @@ export default function Sidebar() {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 200,
+    width: 220,
     backgroundColor: '#fff',
-    paddingVertical: 28,
-    paddingHorizontal: 10,
-    borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
+    paddingVertical: 32,
+    paddingHorizontal: 16,
     minHeight: '100%',
+    borderRightWidth: 1,
+    borderRightColor: '#ececec',
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
+  sidebarDark: {
+    backgroundColor: '#232136',
+    borderRightColor: '#232136',
+  },
+  profileArea: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  avatarCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#7C3AED',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 26,
+  },
+  profileName: {
+    color: '#7C3AED',
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e9d5ff',
+    marginVertical: 10,
+    width: '100%',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingLeft: 8,
-    borderRadius: 12,
-    marginBottom: 10,
+    paddingVertical: 16,
+    paddingLeft: 10,
+    borderRadius: 14,
+    marginBottom: 12,
     position: 'relative',
     backgroundColor: 'transparent',
     transition: 'background-color 0.18s',
   },
   activeMenu: {
-    backgroundColor: '#f5f7ff',
-    shadowColor: ACCENT,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    backgroundColor: '#7C3AED',
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
   },
   hoverMenu: {
-    backgroundColor: ACCENT,
-  },
-  accentBar: {
-    width: 6,
-    height: 32,
-    borderRadius: 4,
-    backgroundColor: ACCENT,
-    marginRight: 10,
-    shadowColor: ACCENT,
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    backgroundColor: '#a78bfa',
   },
   menuText: {
-    fontSize: 16,
+    fontSize: 17,
     color: ACCENT,
-    fontWeight: '500',
+    fontWeight: '600',
     marginLeft: 4,
     transition: 'color 0.18s',
   },
   activeText: {
     fontWeight: 'bold',
-    color: ACCENT,
-    fontSize: 17,
+    color: '#fff',
+    fontSize: 18,
   },
   hoverText: {
     color: '#fff',
     fontWeight: 'bold',
   },
-  menuTextActive: {
+  newBadge: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 10,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.10,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  newBadgeText: {
+    color: '#7C3AED',
     fontWeight: 'bold',
-    color: ACCENT,
-    fontSize: 17,
+    fontSize: 13,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    paddingVertical: 12,
+    paddingLeft: 10,
+    borderRadius: 14,
+    backgroundColor: '#fef2f2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+  },
+  logoutText: {
+    color: '#ef4444',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 

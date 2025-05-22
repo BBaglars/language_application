@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3000/api';
+import api from '../../../api';
 
 export default function CategoryForm() {
   const [name, setName] = useState('');
@@ -16,11 +14,11 @@ export default function CategoryForm() {
     }
     try {
       setLoading(true);
-      await axios.post(`${API_URL}/categories`, { name, description });
+      await api.post('/categories', { name, description });
       Alert.alert('Başarılı', 'Kategori eklendi!');
       setName(''); setDescription('');
     } catch (e) {
-      Alert.alert('Hata', 'Kategori eklenemedi.');
+      Alert.alert('Hata', e?.response?.data?.message || 'Kategori eklenemedi.');
     } finally {
       setLoading(false);
     }
