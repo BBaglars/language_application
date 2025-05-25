@@ -32,6 +32,23 @@ const gameTypes = [
     desc: 'Kelimeleri anlamlarıyla eşleştir.',
     colors: ['#43e97b', '#38f9d7'],
     icon: '🧩',
+    isNew: true,
+  },
+  {
+    type: 'WORD_SEARCH',
+    title: 'Kelime Bulmaca',
+    desc: 'Gizlenmiş kelimeleri bul.',
+    colors: ['#6a11cb', '#2575fc'],
+    icon: '🔍',
+    isNew: true,
+  },
+  {
+    type: 'WORD_SCRAMBLE',
+    title: 'Kelime Karıştırma',
+    desc: 'Karışık harfleri doğru sıraya diz!',
+    colors: ['#f43f5e', '#fbbf24'],
+    icon: '🔀',
+    isNew: true,
   },
   {
     type: 'TRANSLATION',
@@ -88,27 +105,41 @@ export default function GamesScreen() {
 
   useEffect(() => {
     // AsyncStorage'dan son seçimleri yükle
-    AsyncStorage.getItem(STORAGE_KEY).then(data => {
+    const loadGameSetup = async () => {
+      try {
+        const data = await AsyncStorage.getItem(STORAGE_KEY);
       if (data) {
-        try {
           setGameSetup(JSON.parse(data));
-        } catch {}
-      }
+        }
+      } catch (error) {
+        console.error('Game setup yüklenirken hata:', error);
+      } finally {
       setLoading(false);
-    });
+      }
+    };
+    loadGameSetup();
   }, []);
+
+  const handleGameSetup = async (setup) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(setup));
+      setGameSetup(setup);
+      setShowSetup(false);
+    } catch (error) {
+      console.error('Game setup kaydedilirken hata:', error);
+    }
+  };
 
   if (loading) {
     return <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />;
   }
 
   if (showSetup) {
-    return <GameSetup onStart={setup => { setGameSetup(setup); setShowSetup(false); }} onBack={() => setShowSetup(false)} />;
+    return <GameSetup onStart={handleGameSetup} onBack={() => setShowSetup(false)} />;
   }
 
   if (!gameSetup) {
-    // Hiç seçim yoksa ilk kez göster
-    return <GameSetup onStart={setup => { setGameSetup(setup); setShowSetup(false); }} onBack={() => setShowSetup(false)} />;
+    return <GameSetup onStart={handleGameSetup} onBack={() => setShowSetup(false)} />;
   }
 
   if (selectedGame && selectedGame.type !== 'LINGO') {
@@ -160,6 +191,12 @@ export default function GamesScreen() {
                       level: gameSetup.level,
                       levelLabel: gameSetup.levelLabel
                     }});
+                  } else if (game.type === 'WORD_MATCH') {
+                    router.push('/games/MatchingGame');
+                  } else if (game.type === 'WORD_SEARCH') {
+                    router.push('/games/WordSearchGame');
+                  } else if (game.type === 'WORD_SCRAMBLE') {
+                    router.push('/games/WordScramble');
                   } else {
                     setSelectedGame(game);
                   }
@@ -189,6 +226,12 @@ export default function GamesScreen() {
                           level: gameSetup.level,
                           levelLabel: gameSetup.levelLabel
                         }});
+                      } else if (game.type === 'WORD_MATCH') {
+                        router.push('/games/MatchingGame');
+                      } else if (game.type === 'WORD_SEARCH') {
+                        router.push('/games/WordSearchGame');
+                      } else if (game.type === 'WORD_SCRAMBLE') {
+                        router.push('/games/WordScramble');
                       } else {
                         setSelectedGame(game);
                       }

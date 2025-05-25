@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, Platform, useColorScheme, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, Platform, useColorScheme, Dimensions, Modal } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import * as Animatable from 'react-native-animatable';
@@ -7,6 +7,8 @@ import { useTheme } from '../../../context/ThemeContext';
 import api from '../../../api';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useGameSettings } from '../../../context/GameSettingsContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUser } from '../../../context/UserContext';
 
 const MAX_ATTEMPTS = 5;
 const { width } = Dimensions.get('window');
@@ -68,6 +70,14 @@ function getLetterStatuses(guess, answer) {
   return result;
 }
 
+// Timer hesaplama fonksiyonu (sadece seviye)
+const calculateTimer = (level) => {
+  const baseTime = 60; // Tüm seviyeler için temel süre 60 sn
+  const levelMultipliers = { A1: 1, A2: 1, B1: 1.2, B2: 1.2, C1: 1.4, C2: 1.4 };
+  const multiplier = levelMultipliers[level] || 1;
+  return Math.round(baseTime * multiplier);
+};
+
 export default function LingoGameScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -102,6 +112,52 @@ export default function LingoGameScreen() {
     inputBg: isDark ? '#232136' : '#fff',
     inputBorder: isDark ? '#a78bfa' : '#7C3AED',
   };
+  const { addPoints } = useUser();
+  const [streak, setStreak] = useState(0);
+  const [earnedPoints, setEarnedPoints] = useState(0);
+  const [showCongratsModal, setShowCongratsModal] = useState(false);
+  const [congratsPoints, setCongratsPoints] = useState({ points: 0, newStreak: 0, details: {} });
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
+  const [showFailModal, setShowFailModal] = useState(false);
+
+  // Streak'i AsyncStorage'dan yükle
+  useEffect(() => {
+    const loadStreak = async () => {
+      try {
+        const savedStreak = await AsyncStorage.getItem('lingo_streak');
+        if (savedStreak) {
+          setStreak(parseInt(savedStreak));
+        }
+      } catch (error) {
+        console.error('Streak yüklenirken hata:', error);
+      }
+    };
+    loadStreak();
+  }, []);
+
+  // Streak'i kaydet
+  const saveStreak = async (newStreak) => {
+    try {
+      await AsyncStorage.setItem('lingo_streak', newStreak.toString());
+      setStreak(newStreak);
+    } catch (error) {
+      console.error('Streak kaydedilirken hata:', error);
+    }
+  };
+
+  // Doğru tahmin sonrası puan ekleme
+  useEffect(() => {
+    if (completed && message.startsWith('Tebrikler')) {
+      const { points, details } = calculatePoints(guesses.length, timeLeft);
+      setEarnedPoints(points);
+      addPoints(points);
+      setCongratsPoints({ points, newStreak: streak, details });
+      setShowCongratsModal(true);
+    } else if (completed && message.startsWith('Bilemedin')) {
+      setShowFailModal(true);
+    }
+  }, [completed, message]);
 
   const fetchWord = async () => {
     setWordLoading(true);
@@ -175,6 +231,82 @@ export default function LingoGameScreen() {
     fetchWord();
   };
 
+  // Oyun bitince tebrik veya bilemedin mesajı
+  const renderCongratsOrFail = () => {
+    if (!completed) return null;
+    if (message.startsWith('Bilemedin')) {
+      return (
+        <View style={styles.failBox} pointerEvents="none">
+          <Text style={styles.failText}>Bilemedin! Doğru kelime: <Text style={styles.revealWord}>{normalizeTR(mockWord, selectedLang)}</Text></Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  // Oyun başladığında timer başlat
+  useEffect(() => {
+    let timer;
+    if (!completed && !wordLoading) {
+      const initialTime = calculateTimer(selectedLevel);
+      setTimeLeft(initialTime);
+      timer = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev === 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev > 0 ? prev - 1 : 0;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [wordLoading, completed, selectedLevel]);
+
+  // Süreyi mm:ss formatında gösteren fonksiyon
+  function formatTime(sec) {
+    if (sec === null) return '--:--';
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Süre bittiğinde modalı aç
+  useEffect(() => {
+    if (timeLeft === 0 && !completed) {
+      setShowTimeUpModal(true);
+    } else {
+      setShowTimeUpModal(false);
+    }
+  }, [timeLeft, completed]);
+
+  // Puan hesaplama fonksiyonu (artık streak'e doğrudan erişiyor)
+  const calculatePoints = (guessCount, timeLeft) => {
+    const basePoint = 10;
+    const timeBonus = timeLeft * 1; // Her saniye için +1 puan
+    const mistakePenalty = (guessCount - 1) * 10; // ilk deneme hariç her yanlış için -10
+    let streakBonus = 0;
+    if (streak >= 10) streakBonus = 50;
+    else if (streak >= 5) streakBonus = 25;
+    else if (streak >= 3) streakBonus = 10;
+    const levelMultipliers = { A1: 1, A2: 1, B1: 1.2, B2: 1.2, C1: 1.4, C2: 1.4 };
+    const multiplier = levelMultipliers[selectedLevel] || 1;
+    let firstTryBonus = 0;
+    if (guessCount === 1) firstTryBonus = 20; // İlk denemede doğruysa ekstra 20 puan
+    const total = Math.round((basePoint + timeBonus + firstTryBonus - mistakePenalty + streakBonus) * multiplier);
+    return {
+      points: total,
+      details: {
+        base: basePoint,
+        timeBonus,
+        firstTryBonus,
+        mistakePenalty,
+        streakBonus,
+        multiplier
+      }
+    };
+  };
+
   if (wordLoading) {
     return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>Kelime yükleniyor...</Text></View>;
   }
@@ -199,6 +331,51 @@ export default function LingoGameScreen() {
           onAnimationEnd={() => setShowConfetti(false)}
         />
       )}
+      <View style={{
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        marginTop: isWeb ? 32 : 32,
+        marginBottom: 10,
+      }}>
+        <View style={{
+          position: 'relative',
+          backgroundColor: isDark ? '#232136' : '#fff',
+          borderRadius: 16,
+          paddingVertical: 4,
+          paddingHorizontal: 18,
+          flexDirection: 'row',
+          alignItems: 'center',
+          borderWidth: 2,
+          borderColor: '#7C3AED',
+          shadowColor: '#7C3AED',
+          shadowOpacity: 0.08,
+          shadowRadius: 8,
+          elevation: 2,
+          marginLeft: isWeb ? 675 : 24,
+        }}>
+          <MaterialIcons name="timer" size={22} color="#7C3AED" style={{marginRight: 6}} />
+          <Text style={{fontWeight:'bold',fontSize:18,color:'#7C3AED',letterSpacing:1}}>{formatTime(timeLeft)}</Text>
+        </View>
+        <View style={{
+          backgroundColor: isDark ? '#232136' : '#fff',
+          borderRadius: 16,
+          paddingTop: 0,
+          paddingBottom: 8,
+          paddingHorizontal: 22,
+          flexDirection: 'row',
+          alignItems: 'center',
+          boxShadow: '0 2px 12px 0 rgba(124,58,237,0.08)',
+          borderWidth: 2,
+          borderColor: isDark ? '#10B981' : '#FBBF24',
+          marginLeft: isWeb ? 200 : 60,
+        }}>
+          <MaterialIcons name="star" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
+          <Text style={{fontWeight:'bold',fontSize:22,color: isDark ? '#10B981' : '#FBBF24',letterSpacing:1}}>{earnedPoints}</Text>
+        </View>
+      </View>
       <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
       <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
       <View style={[styles.bgCircle3, isDark && styles.bgCircle3Dark]} />
@@ -206,12 +383,9 @@ export default function LingoGameScreen() {
         <TouchableOpacity style={styles.backIconBtn} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={28} color={theme.accent} />
         </TouchableOpacity>
-        <Text style={[styles.title, !isWeb && styles.titleWithBack]}>
-          Lingo Oyunu
-        </Text>
         <View style={[styles.selectedInfoBox, { backgroundColor: theme.card }]}> 
           <Text style={[styles.selectedInfoText, { color: theme.text }]}>Dil: <Text style={[styles.selectedInfoValue, { color: theme.accent }]}>{selectedLangLabel}</Text></Text>
-          <Text style={[styles.selectedInfoText, { color: theme.text }]}>Kategori: <Text style={[styles.selectedInfoValue, { color: theme.accent }]}>{selectedCatLabel}</Text></Text>
+          <Text style={[styles.selectedInfoText, { color: theme.text }]}>Kategori: <Text style={[styles.selectedInfoValue, { color: '#F59E42' }]}>{selectedCatLabel}</Text></Text>
           <Text style={[styles.selectedInfoText, { color: theme.text }]}>Seviye: <Text style={[styles.selectedInfoValue, { color: theme.accent }]}>{selectedLevelLabel}</Text></Text>
         </View>
       </View>
@@ -249,7 +423,6 @@ export default function LingoGameScreen() {
           </View>
         ))}
       </View>
-      {!completed && (
         <TextInput
           style={[
             styles.input,
@@ -257,27 +430,28 @@ export default function LingoGameScreen() {
               borderColor: theme.inputBorder,
               color: theme.text,
               backgroundColor: theme.inputBg
-            }
+          },
+          isWeb && { outlineWidth: 2, outlineColor: theme.accent }
           ]}
           value={guess}
           onChangeText={setGuess}
           maxLength={mockWord.length}
           autoCapitalize="characters"
-          editable={!completed}
+        editable={true}
           placeholder="Tahminini yaz..."
           placeholderTextColor={isDark ? '#aaa' : '#888'}
           onSubmitEditing={handleGuess}
+        autoFocus={isWeb}
         />
-      )}
       <View style={styles.bottomArea}>
-        {message ? (
+        {message && !(completed && (message.startsWith('Tebrikler') || message.startsWith('Bilemedin'))) ? (
           <Text style={
             message.startsWith('Tebrikler') ? [styles.successMsg, { color: theme.success }] :
             message.startsWith('Bilemedin') ? [styles.failMsg, { color: theme.fail }] :
             [styles.message, { color: theme.fail }]
           }>
             {message.startsWith('Bilemedin')
-              ? <Text style={[styles.failMsg, { color: theme.fail }]}>Bilemedin! Doğru kelime: <Text style={styles.revealWord}>{selectedLang === 'tr' ? mockWord.toLocaleUpperCase('tr-TR') : mockWord.toUpperCase()}</Text></Text>
+              ? <Text style={[styles.failMsg, { color: theme.fail }]}>Bilemedin! Doğru kelime: <Text style={styles.revealWord}>{normalizeTR(mockWord, selectedLang)}</Text></Text>
               : message}
           </Text>
         ) : null}
@@ -293,6 +467,120 @@ export default function LingoGameScreen() {
           </View>
         </View>
       </View>
+      {/* Tebrikler yazısı tamamen kaldırıldı */}
+      {/* Oyun bitince grid ve inputun üstüne tıklamaları engelleyen overlay */}
+      {completed && (
+        <View style={{position:'absolute',top:0,left:0,right:0,bottom:0,zIndex:20}} pointerEvents="auto" />
+      )}
+      {/* Oyun bitince puan modalı */}
+      {showCongratsModal && (
+        <Modal
+          visible={showCongratsModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCongratsModal(false)}
+        >
+          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
+            <View style={{
+              backgroundColor: isDark ? '#232136' : '#fff',
+              borderRadius:20,
+              padding:32,
+              alignItems:'center',
+              maxWidth:360,
+              shadowColor:'#000',
+              shadowOpacity:0.15,
+              shadowRadius:16,
+              elevation:8
+            }}>
+              <Text style={{fontSize:24,fontWeight:'bold',color:'#FBBF24',marginBottom:12}}>Tebrikler! 🎉</Text>
+              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Doğru kelimeyi buldun!</Text>
+              <Text style={{fontSize:16,color: isDark ? '#fff' : '#232136',marginBottom:8}}>Kazanılan Puanlar:</Text>
+              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Doğru Tahmin: {congratsPoints.details?.base || 0}</Text>
+              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Süre Bonusu: {congratsPoints.details?.timeBonus || 0}</Text>
+              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:10}}>• Streak Bonusu: {congratsPoints.details?.streakBonus || 0}</Text>
+              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:10}}>• Seviye Çarpanı: {congratsPoints.details?.multiplier || 1}</Text>
+              <Text style={{fontSize:17,fontWeight:'bold',color: isDark ? '#a78bfa' : '#7C3AED',marginBottom:18}}>Toplam: {congratsPoints.points} puan</Text>
+              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
+                <TouchableOpacity onPress={() => { setShowCongratsModal(false); restartGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
+                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowCongratsModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
+                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {/* Süre doldu modalı */}
+      {showTimeUpModal && (
+        <Modal
+          visible={showTimeUpModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowTimeUpModal(false)}
+        >
+          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
+            <View style={{
+              backgroundColor: isDark ? '#232136' : '#fff',
+              borderRadius:20,
+              padding:32,
+              alignItems:'center',
+              maxWidth:360,
+              shadowColor:'#000',
+              shadowOpacity:0.15,
+              shadowRadius:16,
+              elevation:8
+            }}>
+              <Text style={{fontSize:24,fontWeight:'bold',color:'#F87171',marginBottom:12}}>Süre Doldu!</Text>
+              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Maalesef, süren doldu. Tekrar deneyebilirsin!</Text>
+              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Doğru kelime: <Text style={{color:'#7C3AED',fontWeight:'bold'}}>{normalizeTR(mockWord, selectedLang)}</Text></Text>
+              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
+                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); restartGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
+                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
+                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+      {/* Bilemedin modalı */}
+      {showFailModal && (
+        <Modal
+          visible={showFailModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowFailModal(false)}
+        >
+          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
+            <View style={{
+              backgroundColor: isDark ? '#232136' : '#fff',
+              borderRadius:20,
+              padding:32,
+              alignItems:'center',
+              maxWidth:360,
+              shadowColor:'#000',
+              shadowOpacity:0.15,
+              shadowRadius:16,
+              elevation:8
+            }}>
+              <Text style={{fontSize:24,fontWeight:'bold',color:'#F87171',marginBottom:12}}>Bilemedin!</Text>
+              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Doğru kelime: <Text style={{color:'#7C3AED',fontWeight:'bold'}}>{normalizeTR(mockWord, selectedLang)}</Text></Text>
+              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
+                <TouchableOpacity onPress={() => { setShowFailModal(false); restartGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
+                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowFailModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
+                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -435,8 +723,8 @@ const styles = StyleSheet.create({
   revealWord: { color: '#3B82F6', fontWeight: 'bold', fontSize: 20, marginLeft: 4 },
   backIconBtn: {
     position: 'absolute',
-    left: 0,
-    top: 0,
+    left: isWeb ? 0 : -15,
+    top: isWeb ? -16 : -75,
     padding: 8,
     zIndex: 10,
   },
@@ -486,5 +774,55 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 18,
     marginLeft: 8,
+  },
+  congratsBox: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateY: -54 }],
+    zIndex: 30,
+  },
+  congratsText: {
+    backgroundColor: '#FBBF24',
+    color: '#232136',
+    fontWeight: 'bold',
+    fontSize: isWeb ? 28 : 20,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    textAlign: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  failBox: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ translateY: -54 }],
+    zIndex: 30,
+  },
+  failText: {
+    backgroundColor: '#F87171',
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: isWeb ? 24 : 18,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    textAlign: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
 }); 

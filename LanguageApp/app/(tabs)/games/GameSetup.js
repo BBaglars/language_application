@@ -8,7 +8,6 @@ import { useGameSettings } from '../../../context/GameSettingsContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 
-const API_URL = 'http://192.168.102.34:3000/api'; // Artık kullanılmıyor
 const LEVELS = [
   { label: 'A1', value: 'A1' },
   { label: 'A2', value: 'A2' },

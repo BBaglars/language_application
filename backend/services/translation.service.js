@@ -9,35 +9,44 @@ class TranslationService {
   }
 
   async createTranslation(data) {
-    const { sourceText, targetText, languagePairId } = data;
+    const { sourceWordId, targetWordId, targetText, languagePairId, difficultyLevel } = data;
 
-    const languagePair = await this.prisma.languagePair.findUnique({
-      where: { id: languagePairId }
-    });
-
-    if (!languagePair) {
-      throw new NotFoundError('Dil çifti bulunamadı');
+    if (!sourceWordId || !languagePairId || !difficultyLevel) {
+      throw new ValidationError('Zorunlu alanlar eksik');
+    }
+    if (!targetWordId && !targetText) {
+      throw new ValidationError('Hedef kelime veya anlam (text) zorunlu');
     }
 
-    const existingTranslation = await this.prisma.translation.findFirst({
+    // languagePairId ve difficultyLevel parse
+    const languagePairIdInt = parseInt(languagePairId);
+    const sourceWordIdInt = parseInt(sourceWordId);
+    const targetWordIdInt = targetWordId ? parseInt(targetWordId) : undefined;
+
+    // Aynı çeviri var mı kontrolü (id veya text ile)
+    const existing = await this.prisma.translation.findFirst({
       where: {
-        sourceText,
-        targetText,
-        languagePairId
+        sourceWordId: sourceWordIdInt,
+        languagePairId: languagePairIdInt,
+        ...(targetWordIdInt ? { targetWordId: targetWordIdInt } : {}),
+        ...(targetText ? { targetText } : {})
       }
     });
-
-    if (existingTranslation) {
+    if (existing) {
       throw new ValidationError('Bu çeviri zaten mevcut');
     }
 
     return await this.prisma.translation.create({
       data: {
-        sourceText,
-        targetText,
-        languagePairId
+        sourceWordId: sourceWordIdInt,
+        targetWordId: targetWordIdInt,
+        targetText: targetText || null,
+        languagePairId: languagePairIdInt,
+        difficultyLevel
       },
       include: {
+        sourceWord: true,
+        targetWord: true,
         languagePair: true
       }
     });
@@ -46,7 +55,9 @@ class TranslationService {
   async getTranslations(filters = {}, pagination = {}) {
     const { languagePairId } = filters;
     const { page = 1, limit = 10 } = pagination;
-    const skip = (page - 1) * limit;
+    const pageInt = parseInt(page);
+    const limitInt = parseInt(limit);
+    const skip = (pageInt - 1) * limitInt;
 
     const where = {
       ...(languagePairId && { languagePairId: parseInt(languagePairId) })
@@ -56,12 +67,14 @@ class TranslationService {
       this.prisma.translation.findMany({
         where,
         skip,
-        take: limit,
+        take: limitInt,
         include: {
-          languagePair: true
+          languagePair: true,
+          sourceWord: true,
+          targetWord: true
         },
         orderBy: {
-          sourceText: 'asc'
+          id: 'desc'
         }
       }),
       this.prisma.translation.count({ where })

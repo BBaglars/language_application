@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { NotFoundError, ValidationError } = require('../utils/errors.js');
+const logger = require('../utils/logger.js');
 
 const prisma = new PrismaClient();
 
@@ -19,7 +20,7 @@ class WordService {
       throw new NotFoundError('Dil bulunamadı');
     }
 
-    return await this.prisma.word.create({
+    const word = await this.prisma.word.create({
       data: {
         text,
         meaning,
@@ -32,6 +33,8 @@ class WordService {
         categories: true
       }
     });
+    logger.info(`Kelime oluşturuldu: ${word.id} - ${word.text}`);
+    return word;
   }
 
   async getWords(filters = {}, pagination = {}) {
@@ -108,7 +111,7 @@ class WordService {
 
     const letterCount = text ? text.length : existingWord.text.length;
 
-    return await this.prisma.word.update({
+    const word = await this.prisma.word.update({
       where: { id },
       data: {
         text: text !== undefined ? text : existingWord.text,
@@ -122,6 +125,8 @@ class WordService {
         categories: true
       }
     });
+    logger.info(`Kelime güncellendi: ${word.id} - ${word.text}`);
+    return word;
   }
 
   async deleteWord(id) {
@@ -146,9 +151,11 @@ class WordService {
       })
     ]);
 
-    return await this.prisma.word.delete({
+    const deletedWord = await this.prisma.word.delete({
       where: { id }
     });
+    logger.info(`Kelime silindi: ${deletedWord.id} - ${deletedWord.text}`);
+    return deletedWord;
   }
 
   async getWordsByDifficultyLevel(difficultyLevel) {

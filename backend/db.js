@@ -20,7 +20,4 @@ async function testConnection() {
   }
 }
 
-export {
-  prisma,
-  testConnection
-}; 
+module.exports = prisma; 

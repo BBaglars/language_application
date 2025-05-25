@@ -70,7 +70,7 @@ app.use('/api/stats', statsRoutes);
 // app.use('/api/story-generation-criteria', storyGenerationCriteriaRoutes);
 // app.use('/api/games', gameRoutes);
 // app.use('/api/user-word-progress', userWordProgressRoutes);
-app.use('/api/game-words', gameWordsRoutes);
+// app.use('/api/game-words', gameWordsRoutes);
 
 // 404 handler
 app.use((req, res) => {

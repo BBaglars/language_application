@@ -12,6 +12,11 @@ const storyGenerationCriteriaRoutes = require('./storyGenerationCriteria.routes.
 const storyGenerationJobRoutes = require('./storyGenerationJob.routes.js');
 const userWordProgressRoutes = require('./userWordProgress.routes.js');
 const gameResultRoutes = require('./gameResult.routes.js');
+const matchingGameRoutes = require('./matchingGame.routes.js');
+const gameWordsRoutes = require('./game-words.js');
+const wordSearchGameRoutes = require('./wordSearchGame.routes.js');
+const gameRoutes = require('./game.routes.js');
+const gameWordsRouter = require('./gameWords');
 
 // Ana route'ları birleştir
 router.use('/auth', authRoutes);
@@ -26,5 +31,10 @@ router.use('/story-generation-criteria', storyGenerationCriteriaRoutes);
 router.use('/story-generation-jobs', storyGenerationJobRoutes);
 router.use('/user-word-progress', userWordProgressRoutes);
 router.use('/game-results', gameResultRoutes);
+router.use('/matching-game-cards', matchingGameRoutes);
+router.use('/game-words', gameWordsRoutes);
+router.use('/word-search-words', wordSearchGameRoutes);
+router.use('/games', gameRoutes);
+router.use('/game-words', gameWordsRouter);
 
 module.exports = router; 

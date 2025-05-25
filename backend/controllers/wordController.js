@@ -3,6 +3,7 @@ const { AppError } = require('../utils/errors.js');
 const WordService = require('../services/word.service.js');
 const { validateWord } = require('../middleware/validation.js');
 const { validateWordUpdate } = require('../middleware/validation.js');
+const logger = require('../utils/logger.js');
 
 const prisma = new PrismaClient();
 
@@ -13,14 +14,23 @@ class WordController {
 
   getWords = async (req, res, next) => {
     try {
-      const { search, languageId, categoryId, page = 1, limit = 10 } = req.query;
+      let { search, languageId, categoryId, page = 1, limit = 10 } = req.query;
+
+      // String gelenleri sayıya çevir
+      if (languageId) languageId = parseInt(languageId);
+      if (categoryId) categoryId = parseInt(categoryId);
+      page = parseInt(page);
+      limit = parseInt(limit);
+
+      logger.debug('getWords params:', { search, languageId, categoryId, page, limit });
       const result = await this.wordService.getWords(
         { search, languageId, categoryId },
         { page, limit }
       );
       res.json({ status: 'success', data: { words: result.data } });
     } catch (error) {
-      next(new AppError('Kelimeler alınırken bir hata oluştu', 500));
+      logger.error('getWords hatası:', error);
+      next(error);
     }
   };
 
@@ -49,6 +59,7 @@ class WordController {
       };
       
       const word = await this.wordService.createWord(wordData);
+      logger.info(`Kelime oluşturuldu: ${word.id} - ${word.text}`);
       res.status(201).json({ status: 'success', data: { word } });
     } catch (error) {
       next(new AppError('Kelime oluşturulurken bir hata oluştu', 500));
@@ -68,6 +79,7 @@ class WordController {
       if (!word) {
         return next(new AppError('Kelime bulunamadı', 404));
       }
+      logger.info(`Kelime güncellendi: ${word.id} - ${word.text}`);
       res.json({ status: 'success', data: { word } });
     } catch (error) {
       next(new AppError('Kelime güncellenirken bir hata oluştu', 500));
@@ -80,6 +92,7 @@ class WordController {
       if (!word) {
         return next(new AppError('Kelime bulunamadı', 404));
       }
+      logger.info(`Kelime silindi: ${word.id} - ${word.text}`);
       res.status(204).send();
     } catch (error) {
       next(new AppError('Kelime silinirken bir hata oluştu', 500));

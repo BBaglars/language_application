@@ -23,7 +23,8 @@ class TranslationController {
         data: { translations: result.data }
       });
     } catch (error) {
-      next(new AppError('Çeviriler alınırken bir hata oluştu', 500));
+      console.error('getTranslations hata:', error);
+      next(error);
     }
   };
 
@@ -57,6 +58,7 @@ class TranslationController {
         data: { translation }
       });
     } catch (error) {
+      console.error('createTranslation hata:', error);
       next(new AppError('Çeviri oluşturulurken bir hata oluştu', 500));
     }
   };

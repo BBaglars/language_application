@@ -1,356 +1,339 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, TextInput, FlatList, ScrollView } from 'react-native';
 import api from '../../../api';
 import { Picker } from '@react-native-picker/picker';
 
-const API_URL = 'http://192.168.102.34:3000/api';
-
 export default function TranslationForm() {
-  const [languages, setLanguages] = useState([]);
+  const [languagePairs, setLanguagePairs] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [sourceLang, setSourceLang] = useState('');
-  const [targetLang, setTargetLang] = useState('');
-  const [category, setCategory] = useState('');
   const [sourceWords, setSourceWords] = useState([]);
   const [targetWords, setTargetWords] = useState([]);
-  const [sourceWord, setSourceWord] = useState('');
-  const [targetWord, setTargetWord] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [langLoading, setLangLoading] = useState(true);
-  const [catLoading, setCatLoading] = useState(true);
-  const [wordsLoading, setWordsLoading] = useState(false);
-  const [sourceText, setSourceText] = useState('');
-  const [targetText, setTargetText] = useState('');
-  const [languagePairs, setLanguagePairs] = useState([]);
-  const [selectedPair, setSelectedPair] = useState(null);
   const [translations, setTranslations] = useState([]);
+
+  const [selectedPairId, setSelectedPairId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedSourceWord, setSelectedSourceWord] = useState(null);
-  const [selectedTargetWord, setSelectedTargetWord] = useState(null);
+  const [selectedSourceWord, setSelectedSourceWord] = useState('');
+  const [selectedTargetWord, setSelectedTargetWord] = useState('');
 
-  useEffect(() => {
-    fetchLanguages();
-    fetchCategories();
-    fetchLanguagePairs();
-    fetchTranslations();
-  }, []);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
+  // Hedef kelime text inputu için state
+  const [customTargetText, setCustomTargetText] = useState('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('A1');
+
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 50;
+
+  // Dil çifti veya kategori değişince kelimeleri çek
   useEffect(() => {
-    if (selectedPair && selectedCategory) {
-      fetchSourceWords();
-      fetchTargetWords();
+    console.log('useEffect bağımlılıkları:', { selectedPairId, selectedCategory, languagePairs });
+    const selectedPair = languagePairs.find(p => p.id === Number(selectedPairId));
+    const selectedCategoryNum = Number(selectedCategory);
+    if (selectedPair && selectedCategoryNum) {
+      console.log('fetchWords çağrılacak!', selectedPair, selectedCategoryNum);
+      fetchWords('source', selectedPair, selectedCategoryNum);
+      fetchWords('target', selectedPair, selectedCategoryNum);
+    } else {
+      setSourceWords([]);
+      setTargetWords([]);
     }
-  }, [selectedPair, selectedCategory]);
+  }, [selectedPairId, selectedCategory, languagePairs]);
 
-  const fetchLanguages = async () => {
+  const fetchWords = async (type, selectedPair, selectedCategoryNum) => {
+    console.log('fetchWords fonksiyonunun başı:', type, selectedPair, selectedCategoryNum);
+    if (!selectedPair || !selectedCategoryNum) return;
+    console.log('api.get çağrısı yapılacak:', type, selectedPair, selectedCategoryNum);
     try {
-      setLangLoading(true);
-      const res = await api.get(`/languages`);
-      const langs = res.data.data?.languages?.map(l => ({ label: l.name, value: l.id.toString() })) || [];
-      setLanguages(langs);
-      setSourceLang(langs[0]?.value || '');
-      setTargetLang(langs[1]?.value || '');
-    } catch (e) {
-      Alert.alert('Hata', 'Dilleri yüklerken hata oluştu.');
-    } finally {
-      setLangLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      setCatLoading(true);
-      const res = await api.get(`/categories`);
-      const cats = res.data.data?.categories?.map(c => ({ label: c.name, value: c.id.toString() })) || [];
-      setCategories(cats);
-      setCategory(cats[0]?.value || '');
-    } catch (e) {
-      Alert.alert('Hata', 'Kategoriler yüklenemedi.');
-    } finally {
-      setCatLoading(false);
-    }
-  };
-
-  // Kategori, kaynak dil veya hedef dil değişince kelimeleri çek
-  useEffect(() => {
-    if (category && sourceLang) fetchWords('source');
-  }, [category, sourceLang]);
-  useEffect(() => {
-    if (category && targetLang) fetchWords('target');
-  }, [category, targetLang]);
-
-  const fetchWords = async (type) => {
-    setWordsLoading(true);
-    try {
-      const res = await api.get(`/words`, {
+      const res = await api.get('/words', {
         params: {
-          languageId: type === 'source' ? sourceLang : targetLang,
-          categoryId: category
+          languageId: type === 'source' ? selectedPair.sourceLanguageId : selectedPair.targetLanguageId,
+          categoryId: selectedCategoryNum
         }
       });
-      const words = res.data.data?.words?.map(w => ({ label: w.text, value: w.text })) || [];
-      if (type === 'source') {
-        setSourceWords(words);
-        setSourceWord(words[0]?.value || '');
-      } else {
-        setTargetWords(words);
-        setTargetWord(words[0]?.value || '');
-      }
+      console.log('API response:', res.data);
+      const words = (res.data.data?.words || []).map(w => ({ label: w.text, value: w.id }));
+      if (type === 'source') setSourceWords(words);
+      else setTargetWords(words);
     } catch (e) {
+      console.log('fetchWords hata:', e);
       if (type === 'source') setSourceWords([]);
       else setTargetWords([]);
-    } finally {
-      setWordsLoading(false);
     }
   };
 
-  const fetchLanguagePairs = async () => {
-    try {
-      const res = await api.get(`/language-pairs`);
-      setLanguagePairs(res.data.data || []);
-    } catch (e) {
-      Alert.alert('Hata', 'Dil çiftleri yüklenemedi!');
+  const handleAddTranslation = async () => {
+    const selectedPair = languagePairs.find(p => p.id === Number(selectedPairId));
+    if (selectedTargetWord && customTargetText) {
+      Alert.alert('Hata', 'Aynı anda hem hedef kelime seçemez hem de anlamı elle giremezsiniz. Sadece birini doldurun!');
+      return;
     }
-  };
-
-  const fetchTranslations = async () => {
-    try {
-      const res = await api.get(`/translations`);
-      setTranslations(res.data.data || []);
-    } catch (e) {
-      Alert.alert('Hata', 'Translationlar yüklenemedi!');
-    }
-  };
-
-  const fetchSourceWords = async () => {
-    try {
-      const res = await api.get(`/words`, {
-        params: {
-          languageId: selectedPair.sourceLanguageId,
-          categoryId: selectedCategory
-        }
-      });
-      setSourceWords(res.data.data || []);
-    } catch (e) {
-      Alert.alert('Hata', 'Kaynak kelimeler yüklenemedi!');
-    }
-  };
-
-  const fetchTargetWords = async () => {
-    try {
-      const res = await api.get(`/words`, {
-        params: {
-          languageId: selectedPair.targetLanguageId,
-          categoryId: selectedCategory
-        }
-      });
-      setTargetWords(res.data.data || []);
-    } catch (e) {
-      Alert.alert('Hata', 'Hedef kelimeler yüklenemedi!');
-    }
-  };
-
-  const handleSubmit = async () => {
-    if (!selectedSourceWord || !selectedTargetWord || !selectedPair) {
-      Alert.alert('Hata', 'Lütfen tüm alanları doldurun!');
+    if (!selectedPair || !selectedCategory || !selectedSourceWord || (!selectedTargetWord && !customTargetText)) {
+      Alert.alert('Hata', 'Tüm alanları doldurun!');
       return;
     }
     setLoading(true);
     try {
-      await api.post(`/translations`, {
-        sourceText: selectedSourceWord.text,
-        targetText: selectedTargetWord.text,
-        languagePairId: selectedPair.id
+      await api.post('/translations', {
+        sourceWordId: selectedSourceWord,
+        targetWordId: selectedTargetWord || undefined,
+        targetText: selectedTargetWord ? undefined : customTargetText,
+        languagePairId: selectedPair.id,
+        difficultyLevel: selectedDifficulty
       });
-      Alert.alert('Başarılı', 'Translation eklendi!');
-      setSelectedSourceWord(null);
-      setSelectedTargetWord(null);
-      setSelectedPair(null);
+      Alert.alert('Başarılı', 'Çeviri eklendi!');
+      setSelectedSourceWord('');
+      setSelectedTargetWord('');
+      setCustomTargetText('');
       fetchTranslations();
     } catch (e) {
-      Alert.alert('Hata', 'Translation eklenemedi!');
+      Alert.alert('Hata', 'Çeviri eklenemedi!');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
+  const fetchTranslations = async (pageNum = 1) => {
     try {
-      await api.delete(`/translations/${id}`);
-      Alert.alert('Başarılı', 'Translation silindi!');
-      fetchTranslations();
-    } catch (e) {
-      Alert.alert('Hata', 'Translation silinemedi!');
+      setFetching(true);
+      const params = { limit, page: pageNum };
+      if (selectedPairId) params.languagePairId = selectedPairId;
+      const res = await api.get('/translations', { params });
+      setTranslations(res.data.data?.translations || []);
+      setTotalPages(res.data.data?.totalPages || 1);
+      setPage(pageNum);
+    } catch (e) {}
+    finally {
+      setFetching(false);
     }
   };
 
-  if (langLoading || catLoading) {
+  useEffect(() => {
+    const fetchInitial = async () => {
+      setFetching(true);
+      try {
+        const [pairsRes, catsRes] = await Promise.all([
+          api.get('/language-pairs'),
+          api.get('/categories')
+        ]);
+        setLanguagePairs(pairsRes.data.data || []);
+        setCategories((catsRes.data.data?.categories || []).map(c => ({ label: c.name, value: c.id })));
+        fetchTranslations(1);
+      } catch (e) {
+        Alert.alert('Hata', 'Veriler yüklenemedi!');
+      } finally {
+        setFetching(false);
+      }
+    };
+    fetchInitial();
+  }, []);
+
+  const handleDelete = async (id) => {
+    setLoading(true);
+    try {
+      await api.delete(`/translations/${id}`);
+      fetchTranslations();
+      Alert.alert('Başarılı', 'Çeviri silindi!');
+    } catch (e) {
+      Alert.alert('Hata', 'Çeviri silinemedi!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (fetching) {
     return <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />;
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Translation Ekle</Text>
-      <View style={styles.dropdownContainer}>
-        <Text style={styles.label}>Kategori Seçin:</Text>
-        <FlatList
-          data={categories}
-          keyExtractor={(item, idx) => (item?.id ? item.id.toString() : idx.toString())}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.dropdownItem, selectedCategory === item.value && styles.selectedItem]}
-              onPress={() => setSelectedCategory(item.value)}
-            >
-              <Text>{item.label}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-      <View style={styles.dropdownContainer}>
-        <Text style={styles.label}>Dil Çifti Seçin:</Text>
-        <FlatList
-          data={languagePairs}
-          keyExtractor={(item, idx) => (item?.id ? item.id.toString() : idx.toString())}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.dropdownItem, selectedPair?.id === item.id && styles.selectedItem]}
-              onPress={() => setSelectedPair(item)}
-            >
-              <Text>{item.sourceLanguage.name} - {item.targetLanguage.name}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-      <View style={styles.dropdownContainer}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Admin Translation Formu</Text>
+      {/* Dil Çifti Seçimi */}
+      <Text style={styles.label}>Dil Çifti:</Text>
+      <Picker
+        selectedValue={selectedPairId}
+        onValueChange={setSelectedPairId}
+        style={styles.picker}
+      >
+        <Picker.Item label="Dil çifti seçin" value="" />
+        {languagePairs.map(pair => (
+          <Picker.Item key={pair.id} label={`${pair.sourceLanguage?.name} → ${pair.targetLanguage?.name}`} value={pair.id.toString()} />
+        ))}
+      </Picker>
+
+      {/* Kategori Seçimi */}
+      <Text style={styles.label}>Kategori:</Text>
+      <Picker
+        selectedValue={selectedCategory}
+        onValueChange={setSelectedCategory}
+        style={styles.picker}
+      >
+        <Picker.Item label="Kategori seçin" value="" />
+        {categories.map(cat => (
+          <Picker.Item key={cat.value} label={cat.label} value={cat.value.toString()} />
+        ))}
+      </Picker>
+
+      {/* Kaynak Kelime Seçimi */}
         <Text style={styles.label}>Kaynak Kelime:</Text>
-        <FlatList
-          data={sourceWords}
-          keyExtractor={(item, idx) => (item?.id ? item.id.toString() : idx.toString())}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.dropdownItem, selectedSourceWord?.id === item.id && styles.selectedItem]}
-              onPress={() => setSelectedSourceWord(item)}
-            >
-              <Text>{item.text}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
-      <View style={styles.dropdownContainer}>
+      <Picker
+        selectedValue={selectedSourceWord}
+        onValueChange={setSelectedSourceWord}
+        style={styles.picker}
+        enabled={!!sourceWords.length}
+      >
+        <Picker.Item label="Kaynak kelime seçin" value="" />
+        {sourceWords.map(w => (
+          <Picker.Item key={w.value} label={w.label} value={w.value} />
+        ))}
+      </Picker>
+
+      {/* Hedef Kelime Seçimi */}
         <Text style={styles.label}>Hedef Kelime:</Text>
-        <FlatList
-          data={targetWords}
-          keyExtractor={(item, idx) => (item?.id ? item.id.toString() : idx.toString())}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.dropdownItem, selectedTargetWord?.id === item.id && styles.selectedItem]}
-              onPress={() => setSelectedTargetWord(item)}
+      <Picker
+        selectedValue={selectedTargetWord}
+        onValueChange={setSelectedTargetWord}
+        style={styles.picker}
+        enabled={!!targetWords.length}
+      >
+        <Picker.Item label="Hedef kelime seçin" value="" />
+        {targetWords.map(w => (
+          <Picker.Item key={w.value} label={w.label} value={w.value} />
+        ))}
+      </Picker>
+      {/* Hedef kelime yoksa anlamı text olarak gir */}
+      <TextInput
+        placeholder="Hedef anlamı elle gir (opsiyonel)"
+        value={customTargetText}
+        onChangeText={setCustomTargetText}
+        style={{ width: '100%', backgroundColor: '#f3f4f6', borderRadius: 8, marginBottom: 8, padding: 10 }}
+      />
+      {/* Seviye seçimi */}
+      <Text style={styles.label}>Seviye:</Text>
+      <Picker
+        selectedValue={selectedDifficulty}
+        onValueChange={setSelectedDifficulty}
+        style={styles.picker}
             >
-              <Text>{item.text}</Text>
-            </TouchableOpacity>
-          )}
-        />
-      </View>
+        <Picker.Item label="A1" value="A1" />
+        <Picker.Item label="A2" value="A2" />
+        <Picker.Item label="B1" value="B1" />
+        <Picker.Item label="B2" value="B2" />
+        <Picker.Item label="C1" value="C1" />
+        <Picker.Item label="C2" value="C2" />
+      </Picker>
+
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSubmit}
+        style={styles.addBtn}
+        onPress={handleAddTranslation}
         disabled={loading}
       >
-        <Text style={styles.buttonText}>{loading ? 'Ekleniyor...' : 'Ekle'}</Text>
+        <Text style={styles.addBtnText}>{loading ? 'Ekleniyor...' : 'Çeviri Ekle'}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.title}>Mevcut Translationlar</Text>
+      {/* Mevcut Çeviriler */}
+      <Text style={[styles.title, { fontSize: 20, marginTop: 32 }]}>Mevcut Çeviriler</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginVertical: 10 }}>
+        <TouchableOpacity
+          onPress={() => page > 1 && fetchTranslations(page - 1)}
+          disabled={page === 1}
+          style={{ marginHorizontal: 10, opacity: page === 1 ? 0.5 : 1 }}
+        >
+          <Text>Önceki</Text>
+        </TouchableOpacity>
+        <Text>{page} / {totalPages}</Text>
+        <TouchableOpacity
+          onPress={() => page < totalPages && fetchTranslations(page + 1)}
+          disabled={page === totalPages}
+          style={{ marginHorizontal: 10, opacity: page === totalPages ? 0.5 : 1 }}
+        >
+          <Text>Sonraki</Text>
+        </TouchableOpacity>
+      </View>
       <FlatList
         data={translations}
-        keyExtractor={(item, idx) => (item?.id ? item.id.toString() : idx.toString())}
+        keyExtractor={item => item.id?.toString() || Math.random().toString()}
         renderItem={({ item }) => (
-          <View style={styles.translationItem}>
-            <Text>{item.sourceText} - {item.targetText}</Text>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDelete(item.id)}
-            >
-              <Text style={styles.deleteButtonText}>Sil</Text>
+          <View style={styles.translationRow}>
+            <Text style={styles.translationText}>
+              {(item.sourceWord?.text || '-')} → {(item.targetWord?.text || item.targetText || '-')}
+            </Text>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
+              <Text style={styles.deleteBtnText}>Sil</Text>
             </TouchableOpacity>
           </View>
         )}
+        ListEmptyComponent={<Text style={{ color: '#888', marginTop: 12 }}>Henüz çeviri yok.</Text>}
+        style={{ width: '100%', marginTop: 8 }}
       />
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     padding: 20,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#fff',
+    flexGrow: 1,
+    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 15,
-    backgroundColor: '#fff',
-  },
-  dropdownContainer: {
-    marginBottom: 20,
+    color: '#4F46E5',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   label: {
     fontSize: 16,
-    marginBottom: 5,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
     color: '#333',
+    alignSelf: 'flex-start',
   },
-  dropdownItem: {
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
+  picker: {
+    width: '100%',
+    backgroundColor: '#f3f4f6',
     borderRadius: 8,
-    marginBottom: 5,
-    backgroundColor: '#fff',
+    marginBottom: 8,
   },
-  selectedItem: {
-    backgroundColor: '#e0e7ff',
-    borderColor: '#7C3AED',
-  },
-  button: {
-    backgroundColor: '#7C3AED',
-    padding: 15,
+  addBtn: {
+    backgroundColor: '#4F46E5',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
     borderRadius: 8,
+    marginTop: 18,
     alignItems: 'center',
-    marginBottom: 20,
   },
-  buttonDisabled: {
-    backgroundColor: '#a78bfa',
-  },
-  buttonText: {
+  addBtnText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 18,
   },
-  translationItem: {
+  translationRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    justifyContent: 'space-between',
+    backgroundColor: '#f3f4f6',
     borderRadius: 8,
-    marginBottom: 10,
-    backgroundColor: '#fff',
+    padding: 12,
+    marginBottom: 8,
   },
-  deleteButton: {
+  translationText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  deleteBtn: {
     backgroundColor: '#ef4444',
-    padding: 8,
-    borderRadius: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    marginLeft: 12,
   },
-  deleteButtonText: {
+  deleteBtnText: {
     color: '#fff',
     fontWeight: 'bold',
   },

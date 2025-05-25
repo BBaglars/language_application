@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Platform, StyleSheet, Activity
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
+import api from '../api';
 
 // Mobil için ayrı bir component
 function MobileEmailLoginScreen() {
@@ -22,14 +23,9 @@ function MobileEmailLoginScreen() {
     setError('');
     setLoading(true);
     try {
-      const response = await fetch('http://192.168.102.34:3000/api/auth/email-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-      if (response.ok && data.status === 'success' && data.data && data.data.success) {
-        // Kullanıcı bulundu, giriş başarılı
+      const response = await api.post('/auth/email-login', { email });
+      const data = response.data;
+      if (response.status === 200 && data.status === 'success' && data.data && data.data.success) {
         setUser(data.data.user);
         await saveToken(data.data.token);
         router.replace('/home');
@@ -107,20 +103,16 @@ export default function LoginScreen() {
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      const idToken = await user.getIdToken();
+          const idToken = await user.getIdToken();
       // Backend'e gönder
-      const backendResponse = await fetch('http://192.168.102.34:3000/api/auth/google-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firebaseId: idToken,
-          email: user.email,
-          name: user.displayName,
-          photoURL: user.photoURL
-        })
-      });
-      const backendJson = await backendResponse.json();
-      if (backendResponse.ok && backendJson.status === 'success' && backendJson.data && backendJson.data.user) {
+      const backendResponse = await api.post('/auth/google-login', {
+              firebaseId: idToken,
+              email: user.email,
+              name: user.displayName,
+              photoURL: user.photoURL
+          });
+      const backendJson = backendResponse.data;
+      if (backendResponse.status === 200 && backendJson.status === 'success' && backendJson.data && backendJson.data.user) {
         await saveUser(backendJson.data.user);
         await saveToken(backendJson.data.token);
         setTimeout(() => {
@@ -129,12 +121,12 @@ export default function LoginScreen() {
       } else {
         setError((backendJson.data && backendJson.data.message) || backendJson.message || 'Giriş başarısız!');
       }
-      setLoading(false);
+        setLoading(false);
     } catch (e) {
       setError('Giriş başarısız!');
-      setLoading(false);
-    }
-  };
+        setLoading(false);
+      }
+    };
 
   // Web için Google ile giriş ekranı
   return (

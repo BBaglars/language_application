@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { generateToken } = require('../utils/jwt.js');
 const { AuthenticationError, ValidationError } = require('../utils/errors.js');
-const { logger } = require('../utils/logger.js');
+const logger = require('../utils/logger.js');
 const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();

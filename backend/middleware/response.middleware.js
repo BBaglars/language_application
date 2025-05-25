@@ -1,4 +1,4 @@
-const { logger } = require('../utils/logger');
+const logger = require('../utils/logger.js');
 
 const responseMiddleware = (req, res, next) => {
   const originalJson = res.json;

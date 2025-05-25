@@ -72,20 +72,23 @@ const validateWordUpdate = (data) => {
 // Çeviri validasyonu
 const validateTranslation = (data) => {
   const schema = Joi.object({
-    sourceText: Joi.string().required().messages({
-      'string.empty': 'Kaynak metin boş olamaz',
-      'any.required': 'Kaynak metin zorunludur'
+    sourceWordId: Joi.number().required().messages({
+      'number.base': 'Kaynak kelime ID sayı olmalı',
+      'any.required': 'Kaynak kelime zorunlu'
     }),
-    targetText: Joi.string().required().messages({
-      'string.empty': 'Hedef metin boş olamaz',
-      'any.required': 'Hedef metin zorunludur'
-    }),
+    targetWordId: Joi.number().optional(),
+    targetText: Joi.string().allow(null, '').optional(),
     languagePairId: Joi.number().required().messages({
-      'number.base': 'Dil çifti ID\'si sayı olmalıdır',
-      'any.required': 'Dil çifti ID\'si zorunludur'
+      'number.base': 'Dil çifti ID sayı olmalı',
+      'any.required': 'Dil çifti zorunlu'
+    }),
+    difficultyLevel: Joi.string().valid('A1','A2','B1','B2','C1','C2').required().messages({
+      'any.only': 'Seviye A1, A2, B1, B2, C1 veya C2 olmalı',
+      'any.required': 'Seviye zorunlu'
     })
+  }).or('targetWordId', 'targetText').messages({
+    'object.missing': 'Hedef kelime veya anlam (text) zorunlu'
   });
-
   return schema.validate(data);
 };
 

@@ -71,6 +71,10 @@ model Word {
   progress        UserWordProgress[]
   categories      WordCategory[]
   storyWords      StoryWord[]
+
+  // Translation ilişkileri
+  sourceTranslations Translation[] @relation("SourceWord")
+  targetTranslations Translation[] @relation("TargetWord")
 }
 
 model Category {
@@ -105,11 +109,16 @@ model Language {
 
 model Translation {
   id              Int          @id @default(autoincrement())
-  sourceText      String
-  targetText      String
+  sourceWordId    Int
+  targetWordId    Int?
+  targetText      String?
   languagePairId  Int
+  difficultyLevel DifficultyLevel
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  sourceWord      Word         @relation("SourceWord", fields: [sourceWordId], references: [id])
+  targetWord      Word?        @relation("TargetWord", fields: [targetWordId], references: [id])
   languagePair    LanguagePair @relation(fields: [languagePairId], references: [id])
 }
 

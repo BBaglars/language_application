@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameSettingsProvider } from '../context/GameSettingsContext';
 import { UserProvider, useUser } from '../context/UserContext';
 import { useRouter, usePathname } from 'expo-router';
+import { PaperProvider } from 'react-native-paper';
 
 function AuthGuard({ children }) {
   const { user, token, loading } = useUser();
@@ -41,6 +42,7 @@ export default function RootLayout({ children }) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   return (
+    <PaperProvider>
     <ThemeProvider>
       <GameSettingsProvider>
         <UserProvider>
@@ -49,18 +51,19 @@ export default function RootLayout({ children }) {
               style={{ flex: 1, backgroundColor: isDark ? '#18181b' : '#fff' }}
               edges={['top', 'bottom', 'left', 'right']}
             >
-              <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#18181b' : '#fff'} />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                }}
-              >
-                {children}
-              </Stack>
-            </SafeAreaView>
+          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#18181b' : '#fff'} />
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+          >
+            {children}
+          </Stack>
+        </SafeAreaView>
           </AuthGuard>
         </UserProvider>
       </GameSettingsProvider>
     </ThemeProvider>
+    </PaperProvider>
   );
 } 

@@ -13,7 +13,7 @@ router.use(authenticate);
 // Çeviri işlemleri
 router.get('/', translationController.getTranslations);
 router.get('/:id', translationController.getTranslationById);
-router.post('/', validateRequest(createTranslationSchema), translationController.createTranslation);
+router.post('/', translationController.createTranslation);
 router.put('/:id', validateRequest(updateTranslationSchema), translationController.updateTranslation);
 router.delete('/:id', translationController.deleteTranslation);
 

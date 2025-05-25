@@ -17,21 +17,36 @@ const menuItems = [
   { label: 'Ayarlar', route: '/settings', icon: 'settings' },
 ];
 
+let createPortal = null;
+if (typeof window !== 'undefined') {
+  try {
+    // Sadece webde import et
+    createPortal = require('react-dom').createPortal;
+  } catch {}
+}
+
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const [hovered, setHovered] = useState(null);
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme ? useTheme() : { theme: 'light', setTheme: () => {} };
   const deviceColorScheme = useDeviceColorScheme();
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
   const isWeb = Platform.OS === 'web';
   const { user, logout } = useUser ? useUser() : { user: null, logout: () => {} };
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Aktif menü kontrolü için fonksiyon
   function isActive(route) {
     return pathname.startsWith(route);
   }
+
+  // Ayarlar menü öğesinin index'ini bul
+  const settingsIdx = menuItems.findIndex(item => item.label === 'Ayarlar');
+  const MENU_ITEM_HEIGHT = 44; // Tahmini yükseklik (padding+icon+text)
+  const PROFILE_AREA_HEIGHT = 210; // Profil alanı ve divider tahmini yükseklik
+  const fabTop = PROFILE_AREA_HEIGHT + settingsIdx * MENU_ITEM_HEIGHT;
 
   return (
     <View style={[styles.sidebar, isDark && styles.sidebarDark]}>
@@ -57,7 +72,13 @@ export default function Sidebar() {
               active && styles.activeMenu,
               !active && isHover && styles.hoverMenu,
             ]}
-            onPress={() => router.push(item.route)}
+            onPress={() => {
+              if (item.label === 'Ayarlar') {
+                setSettingsOpen(v => !v);
+              } else {
+                router.push(item.route);
+              }
+            }}
             activeOpacity={0.88}
             {...(isWeb && {
               onMouseEnter: () => setHovered(idx),
@@ -70,18 +91,179 @@ export default function Sidebar() {
           </TouchableOpacity>
         );
       })}
-      {/* Çıkış Yap butonu */}
+      {/* Ayarlar FAB */}
+      {settingsOpen && (
+        <>
+          {/* Overlay */}
+          {isWeb && createPortal(
+            <div
+              style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                zIndex: 99998,
+                background: 'transparent',
+              }}
+              onClick={() => setSettingsOpen(false)}
+            />, document.body
+          )}
+          {/* FAB - Bir tık büyük ve modern */}
+          {isWeb && createPortal(
+            <View style={{
+              position: 'fixed',
+              left: 220,
+              top: fabTop,
+              background: isDark
+                ? 'linear-gradient(135deg, #232136 80%, #a78bfa 100%)'
+                : 'linear-gradient(135deg, #fff 80%, #ede9fe 100%)',
+              borderRadius: 18,
+              padding: 22,
+              boxShadow: isDark
+                ? '0 6px 24px 0 rgba(124,58,237,0.22)'
+                : '0 6px 24px 0 rgba(124,58,237,0.13)',
+              border: isDark ? '2.2px solid #a78bfa' : '2.2px solid #a78bfa',
+              zIndex: 99999,
+              minWidth: 200,
+              maxWidth: 270,
+              alignItems: 'center',
+              transition: 'box-shadow 0.2s',
+            }}>
+              <Text style={{
+                color: isDark ? '#fff' : '#a78bfa',
+                fontWeight: 'bold',
+                fontSize: 17,
+                marginBottom: 13,
+                textAlign: 'center',
+                letterSpacing: 0.4,
+              }}>Tema</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 18 }}>
+                {['light', 'dark', 'system'].map((mode, i) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={{
+                      backgroundColor: theme === mode ? (isDark ? '#a78bfa33' : '#f3e8ff') : (isDark ? '#232136' : '#fff'),
+                      borderRadius: 12,
+                      padding: 11,
+                      borderWidth: 2,
+                      borderColor: theme === mode ? '#a78bfa' : (isDark ? '#444' : '#e5e7eb'),
+                      boxShadow: theme === mode ? (isDark ? '0 1px 6px #a78bfa55' : '0 1px 6px #a78bfa22') : 'none',
+                      marginRight: i < 2 ? 7 : 0,
+                      transition: 'all 0.18s',
+                    }}
+                    onPress={() => setTheme(mode)}
+                  >
+                    <Text style={{ fontSize: 21, color: isDark ? '#fff' : '#7C3AED' }}>
+                      {mode === 'light' ? '☀️' : mode === 'dark' ? '🌙' : '💻'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#ef4444',
+                  borderRadius: 12,
+                  paddingVertical: 13,
+                  alignItems: 'center',
+                  width: '100%',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  boxShadow: isDark ? '0 1px 8px #a78bfa55' : '0 1px 8px #ef444422',
+                  marginTop: 4,
+                  transition: 'background 0.18s',
+                }}
+                onPress={async () => {
+                  await logout();
+                  router.replace('/login');
+                }}
+              >
+                <MaterialIcons name="logout" size={20} color="#fff" style={{ marginRight: 7 }} />
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.4 }}>Çıkış Yap</Text>
+              </TouchableOpacity>
+            </View>,
+            document.body
+          )}
+          {/* Mobilde overlay ve FAB */}
+          {!isWeb && (
+            <>
+              <TouchableOpacity
+                style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  zIndex: 99998,
+                  backgroundColor: 'transparent',
+                }}
+                onPress={() => setSettingsOpen(false)}
+              />
+              <View style={{
+                position: 'absolute',
+                left: 220,
+                top: fabTop,
+                backgroundColor: isDark ? '#232136' : '#fff',
+                borderRadius: 18,
+                padding: 22,
+                shadowColor: '#7C3AED',
+                shadowOpacity: isDark ? 0.22 : 0.13,
+                shadowRadius: 12,
+                elevation: 99999,
+                borderWidth: 2.2,
+                borderColor: '#a78bfa',
+                zIndex: 99999,
+                minWidth: 200,
+                maxWidth: 270,
+                alignItems: 'center',
+              }}>
+                <Text style={{
+                  color: isDark ? '#fff' : '#a78bfa',
+                  fontWeight: 'bold',
+                  fontSize: 17,
+                  marginBottom: 13,
+                  textAlign: 'center',
+                  letterSpacing: 0.4,
+                }}>Tema</Text>
+                <View style={{ flexDirection: 'row', gap: 12, marginBottom: 18 }}>
+                  {['light', 'dark', 'system'].map((mode, i) => (
+                    <TouchableOpacity
+                      key={mode}
+                      style={{
+                        backgroundColor: theme === mode ? (isDark ? '#a78bfa33' : '#f3e8ff') : (isDark ? '#232136' : '#fff'),
+                        borderRadius: 12,
+                        padding: 11,
+                        borderWidth: 2,
+                        borderColor: theme === mode ? '#a78bfa' : (isDark ? '#444' : '#e5e7eb'),
+                        marginRight: i < 2 ? 7 : 0,
+                      }}
+                      onPress={() => setTheme(mode)}
+                    >
+                      <Text style={{ fontSize: 21, color: isDark ? '#fff' : '#7C3AED' }}>
+                        {mode === 'light' ? '☀️' : mode === 'dark' ? '🌙' : '💻'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
       <TouchableOpacity
-        style={styles.logoutBtn}
+                  style={{
+                    backgroundColor: '#ef4444',
+                    borderRadius: 12,
+                    paddingVertical: 13,
+                    alignItems: 'center',
+                    width: '100%',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    marginTop: 4,
+                  }}
         onPress={async () => {
           await logout();
           router.replace('/login');
         }}
-        activeOpacity={0.88}
       >
-        <MaterialIcons name="logout" size={22} color="#ef4444" style={{ marginRight: 10 }} />
-        <Text style={styles.logoutText}>Çıkış Yap</Text>
+                  <MaterialIcons name="logout" size={20} color="#fff" style={{ marginRight: 7 }} />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.4 }}>Çıkış Yap</Text>
       </TouchableOpacity>
+              </View>
+            </>
+          )}
+        </>
+      )}
+      {/* Çıkış Yap butonu ve puan göstergesi ... */}
     </View>
   );
 }

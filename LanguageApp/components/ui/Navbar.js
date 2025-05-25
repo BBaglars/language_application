@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
+import { useUser } from '../../context/UserContext';
 
 const ThemeModal = React.lazy(() => import('./ThemeModal'));
 
@@ -13,6 +14,7 @@ export default function Navbar() {
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
   const [modalVisible, setModalVisible] = useState(false);
+  const { user, points } = useUser ? useUser() : { user: null, points: 0 };
 
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
@@ -34,9 +36,23 @@ export default function Navbar() {
         </View>
       </View>
       <View style={styles.rightSection}>
-        <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
-          <Text style={styles.themeIcon}>{isDark ? '🌙' : '☀️'}</Text>
-        </TouchableOpacity>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: isDark ? '#232136' : '#fffbe6',
+          borderRadius: 18,
+          paddingVertical: 7,
+          paddingHorizontal: 18,
+          shadowColor: '#FBBF24',
+          shadowOpacity: 0.13,
+          shadowRadius: 8,
+          elevation: 4,
+          borderWidth: 2,
+          borderColor: '#FBBF24',
+        }}>
+          <MaterialIcons name="emoji-events" size={24} color="#FBBF24" style={{ marginRight: 7 }} />
+          <Text style={{ fontWeight: 'bold', fontSize: 17, color: isDark ? '#FBBF24' : '#b45309', letterSpacing: 1 }}>{points}</Text>
+        </View>
       </View>
     </View>
   );
