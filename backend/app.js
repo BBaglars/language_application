@@ -24,6 +24,7 @@ const storyGenerationCriteriaRoutes = require('./routes/storyGenerationCriteria.
 const gameRoutes = require('./routes/game.routes.js');
 const userWordProgressRoutes = require('./routes/userWordProgress.routes.js');
 const gameWordsRoutes = require('./routes/game-words');
+const generationRoutes = require('./routes/generation');
 
 const prisma = new PrismaClient();
 const app = express();
@@ -59,6 +60,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', routes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/generation', generationRoutes);
 
 // Diğer route eklemeleri yoruma alındı
 // app.use('/api/users', userRoutes);

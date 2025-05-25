@@ -11,9 +11,9 @@ const ACCENT = '#7C3AED';
 const menuItems = [
   { label: 'Ana Sayfa', route: '/home', icon: 'home' },
   { label: 'Oyunlar', route: '/games', icon: 'sports-esports', isNew: true },
-  { label: 'Kelime Listem', route: '/words', icon: 'list' },
-  { label: 'Hikayeler', route: '/stories', icon: 'menu-book' },
-  { label: 'İstatistikler', route: '/stats', icon: 'bar-chart' },
+  { label: 'Akıllı Metinler', route: '/smart-texts', icon: 'psychology' },
+  { label: 'Metinler', route: '/stories', icon: 'menu-book' },
+  { label: 'İstatistikler', route: '/stats', icon: 'bar-chart', locked: true },
   { label: 'Ayarlar', route: '/settings', icon: 'settings' },
 ];
 
@@ -71,23 +71,26 @@ export default function Sidebar() {
               styles.menuItem,
               active && styles.activeMenu,
               !active && isHover && styles.hoverMenu,
+              item.locked && styles.lockedMenuItem,
             ]}
             onPress={() => {
+              if (item.locked) return;
               if (item.label === 'Ayarlar') {
                 setSettingsOpen(v => !v);
               } else {
                 router.push(item.route);
               }
             }}
-            activeOpacity={0.88}
+            activeOpacity={item.locked ? 1 : 0.88}
             {...(isWeb && {
               onMouseEnter: () => setHovered(idx),
               onMouseLeave: () => setHovered(null),
             })}
           >
-            <MaterialIcons name={item.icon} size={24} color={active ? '#fff' : ACCENT} style={{ marginRight: 12 }} />
-            <Text style={[styles.menuText, active && styles.activeText, !active && isHover && styles.hoverText]}>{item.label}</Text>
+            <MaterialIcons name={item.icon} size={24} color={active ? '#fff' : (item.locked ? ACCENT : ACCENT)} style={{ marginRight: 12 }} />
+            <Text style={[styles.menuText, active && styles.activeText, !active && isHover && styles.hoverText, item.locked && styles.lockedText]}>{item.label}</Text>
             {item.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Yeni</Text></View>}
+            {item.locked && <MaterialIcons name="lock" size={16} color={ACCENT} style={{ marginLeft: 8 }} />}
           </TouchableOpacity>
         );
       })}
@@ -239,7 +242,7 @@ export default function Sidebar() {
                     </TouchableOpacity>
                   ))}
                 </View>
-      <TouchableOpacity
+                <TouchableOpacity
                   style={{
                     backgroundColor: '#ef4444',
                     borderRadius: 12,
@@ -250,14 +253,14 @@ export default function Sidebar() {
                     justifyContent: 'center',
                     marginTop: 4,
                   }}
-        onPress={async () => {
-          await logout();
-          router.replace('/login');
-        }}
-      >
+                  onPress={async () => {
+                    await logout();
+                    router.replace('/login');
+                  }}
+                >
                   <MaterialIcons name="logout" size={20} color="#fff" style={{ marginRight: 7 }} />
                   <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16, letterSpacing: 0.4 }}>Çıkış Yap</Text>
-      </TouchableOpacity>
+                </TouchableOpacity>
               </View>
             </>
           )}
@@ -389,5 +392,11 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  lockedMenuItem: {
+    opacity: 0.7,
+  },
+  lockedText: {
+    color: ACCENT,
   },
 }); 

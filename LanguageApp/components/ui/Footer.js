@@ -10,13 +10,13 @@ import { Portal } from 'react-native-paper';
 const ACCENT = '#7C3AED';
 
 // Footer'ın gösterileceği sayfalar
-const FOOTER_PAGES = ['/home', '/games', '/words', '/stories', '/settings'];
+const FOOTER_PAGES = ['/home', '/games', '/words', '/stories', '/settings', '/smart-texts'];
 
 const menuItems = [
   { label: 'Oyunlar', route: '/games', icon: 'sports-esports', isNew: true },
-  { label: 'Kelime', route: '/words', icon: 'list' },
+  { label: 'Akıllı Metinler', route: '/smart-texts', icon: 'psychology', isNew: true },
   { label: 'Ana Sayfa', route: '/home', icon: 'home' },
-  { label: 'Hikayeler', route: '/stories', icon: 'menu-book' },
+  { label: 'Metinler', route: '/stories', icon: 'menu-book' },
   { label: 'Ayarlar', route: '/settings', icon: 'settings' },
 ];
 

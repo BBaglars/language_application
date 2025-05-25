@@ -4,6 +4,7 @@ import { ThemeProvider } from '../context/ThemeContext';
 import { StatusBar, useColorScheme, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameSettingsProvider } from '../context/GameSettingsContext';
+import { TextSettingsProvider } from '../context/TextSettingsContext';
 import { UserProvider, useUser } from '../context/UserContext';
 import { useRouter, usePathname } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
@@ -45,23 +46,25 @@ export default function RootLayout({ children }) {
     <PaperProvider>
     <ThemeProvider>
       <GameSettingsProvider>
-        <UserProvider>
-          <AuthGuard>
-            <SafeAreaView
-              style={{ flex: 1, backgroundColor: isDark ? '#18181b' : '#fff' }}
-              edges={['top', 'bottom', 'left', 'right']}
+        <TextSettingsProvider>
+          <UserProvider>
+            <AuthGuard>
+              <SafeAreaView
+                style={{ flex: 1, backgroundColor: isDark ? '#18181b' : '#fff' }}
+                edges={['top', 'bottom', 'left', 'right']}
+              >
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#18181b' : '#fff'} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
             >
-          <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? '#18181b' : '#fff'} />
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-          >
-            {children}
-          </Stack>
-        </SafeAreaView>
-          </AuthGuard>
-        </UserProvider>
+              {children}
+            </Stack>
+          </SafeAreaView>
+            </AuthGuard>
+          </UserProvider>
+        </TextSettingsProvider>
       </GameSettingsProvider>
     </ThemeProvider>
     </PaperProvider>
