@@ -21,6 +21,7 @@ const gameWordsRouter = require('./gameWords');
 // Ana route'ları birleştir
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/word', wordRoutes);
 router.use('/words', wordRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/languages', languageRoutes);

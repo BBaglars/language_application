@@ -7,6 +7,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useGameSettings } from '../../../context/GameSettingsContext';
 import { useTheme } from '../../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 
 const LEVELS = [
   { label: 'A1', value: 'A1' },
@@ -17,17 +19,16 @@ const LEVELS = [
   { label: 'C2', value: 'C2' },
 ];
 
-// Seçim Dropdown Bileşeni
+// Dropdown Bileşeni
 const SelectComponent = ({ value, setValue, items, placeholder, open, setOpen, onOpen, zIndex, textColor, borderColor, dropdownBg, placeholderColor, dropdownOverlayBg }) => {
   const selectedObj = items.find(i => i.value === value);
   const selectedLabel = selectedObj ? selectedObj.label : placeholder;
   const isPlaceholder = !selectedObj;
-  // Webde 7, mobilde 5 seçenek kadar yükseklik
   const maxHeight = Platform.OS === 'web' ? 44 * 7 : 44 * 5;
   return (
     <>
       <TouchableOpacity
-        style={[styles.customDropdownButton, { borderColor }]}
+        style={[styles.customDropdownButton, { borderColor, backgroundColor: dropdownBg }]}
         onPress={() => {
           setOpen(true);
           if (onOpen) onOpen();
@@ -49,22 +50,24 @@ const SelectComponent = ({ value, setValue, items, placeholder, open, setOpen, o
           onPressOut={() => setOpen(false)}
         >
           <View style={styles.customDropdownModal}>
-            <FlatList
-              data={items}
-              keyExtractor={item => item.value}
-              style={{ maxHeight }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.customDropdownItem, { borderColor }]}
-                  onPress={() => {
-                    setValue(item.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.customDropdownItemText, { color: textColor }]}>{item.label}</Text>
-                </TouchableOpacity>
-              )}
-            />
+            <View style={[styles.customDropdownModal, { backgroundColor: dropdownBg }]}> 
+              <FlatList
+                data={items}
+                keyExtractor={item => item.value}
+                style={{ maxHeight }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.customDropdownItem, { borderColor }]}
+                    onPress={() => {
+                      setValue(item.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.customDropdownItemText, { color: textColor }]}>{item.label}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -72,7 +75,6 @@ const SelectComponent = ({ value, setValue, items, placeholder, open, setOpen, o
   );
 };
 
-// Satır Bileşeni
 const SelectRow = ({ label, dropdownOverlayBg, ...props }) => (
   <View style={styles.selectRow}>
     <Text style={styles.selectLabel}>{label}:</Text>
@@ -80,8 +82,7 @@ const SelectRow = ({ label, dropdownOverlayBg, ...props }) => (
   </View>
 );
 
-// Ana Bileşen
-export default function GameSetup({ onStart, onBack }) {
+export default function GameSetup({ onStart = () => {}, onBack }) {
   const [languages, setLanguages] = useState([]);
   const [categories, setCategories] = useState([]);
   const [selectedLang, setSelectedLang] = useState('');
@@ -97,14 +98,14 @@ export default function GameSetup({ onStart, onBack }) {
   const deviceColorScheme = useDeviceColorScheme();
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
-  const mainBg = isDark ? '#181825' : '#f8fafc';
-  const cardBg = isDark ? '#232136' : '#fff';
-  const textColor = isDark ? '#fff' : '#222';
-  const accent = '#7C3AED';
-  const borderColor = isDark ? '#a78bfa' : '#7C3AED';
+  const cardBg = isDark ? '#232136' : '#f3f4fa';
+  const textColor = isDark ? '#fff' : '#232136';
+  const accent = isDark ? '#fbbf24' : '#7C3AED';
+  const borderColor = isDark ? '#fbbf24' : '#a78bfa';
   const dropdownBg = isDark ? '#232136' : '#fff';
-  const placeholderColor = isDark ? '#aaa' : '#aaa';
-  const dropdownOverlayBg = isDark ? 'rgba(35,33,54,0.85)' : 'rgba(255,255,255,0.85)';
+  const placeholderColor = isDark ? '#e0e7ff' : '#a78bfa';
+  const dropdownOverlayBg = isDark ? 'rgba(35,33,54,0.85)' : 'rgba(124,58,237,0.10)';
+  const router = useRouter();
 
   useEffect(() => {
     fetchData();
@@ -143,6 +144,12 @@ export default function GameSetup({ onStart, onBack }) {
     };
     updateSettings(newSettings);
     onStart(newSettings);
+    if (router && router.back) router.back();
+  };
+
+  const handleBack = () => {
+    if (onBack) onBack();
+    else if (router && router.back) router.back();
   };
 
   if (loading) {
@@ -150,8 +157,8 @@ export default function GameSetup({ onStart, onBack }) {
   }
 
   const renderContent = () => (
-    <View style={[styles.centeredContainer, { backgroundColor: 'transparent' }]}>
-      <View style={[styles.selectArea, { backgroundColor: cardBg, shadowColor: accent }]}>
+    <View style={[styles.centeredContainer, { backgroundColor: 'transparent' }]}> 
+      <View style={[styles.selectArea, { backgroundColor: cardBg, shadowColor: accent }]}> 
         <Text style={[styles.title, { color: accent }]}>Oyun Ayarları</Text>
         <Text style={[styles.desc, { color: '#F59E42' }]}>Oynamak istediğin dili, kategoriyi ve seviyeyi seç:</Text>
         <SelectRow
@@ -202,15 +209,20 @@ export default function GameSetup({ onStart, onBack }) {
           placeholderColor={placeholderColor}
           dropdownOverlayBg={dropdownOverlayBg}
         />
-        <TouchableOpacity style={[styles.startBtn, { backgroundColor: accent }]} onPress={handleStart}>
-          <Text style={styles.startBtnText}>Başla</Text>
-        </TouchableOpacity>
-        {onBack && (
-          <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-            <MaterialIcons name="arrow-back" size={22} color={accent} style={{ marginRight: 4 }} />
-            <Text style={[styles.backBtnText, { color: accent }]}>Geri Dön</Text>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.backButton, { borderColor }]}
+            onPress={handleBack}
+          >
+            <Text style={[styles.buttonText, { color: accent, fontSize: 13 }]}>Geri</Text>
           </TouchableOpacity>
-        )}
+          <TouchableOpacity
+            style={[styles.button, styles.startButton, { backgroundColor: accent }]}
+            onPress={handleStart}
+          >
+            <Text style={[styles.buttonText, { color: '#fff', fontSize: 13 }]}>Başla</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -218,21 +230,25 @@ export default function GameSetup({ onStart, onBack }) {
   return (
     <>
       <Navbar />
-      <View style={[styles.container, { backgroundColor: mainBg, position: 'relative' }]}>
-        {/* Arka plan daireleri */}
-        <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
-        <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
-        {isWeb && <Sidebar />}
-        {isWeb ? (
-          <ScrollView style={[styles.scrollView, { backgroundColor: 'transparent' }]} contentContainerStyle={styles.scrollViewContent}>
-            {renderContent()}
-          </ScrollView>
-        ) : (
-          <View style={[styles.mobileContainer, { backgroundColor: 'transparent' }]}>
-            {renderContent()}
-          </View>
-        )}
-      </View>
+      <LinearGradient
+        colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={[styles.container, { backgroundColor: 'transparent', position: 'relative' }]}> 
+          {isWeb && <Sidebar />}
+          {isWeb ? (
+            <ScrollView style={[styles.scrollView, { backgroundColor: 'transparent' }]} contentContainerStyle={styles.scrollViewContent}>
+              {renderContent()}
+            </ScrollView>
+          ) : (
+            <View style={[styles.mobileContainer, { backgroundColor: 'transparent' }]}> 
+              {renderContent()}
+            </View>
+          )}
+        </View>
+      </LinearGradient>
     </>
   );
 }
@@ -267,10 +283,9 @@ const styles = StyleSheet.create({
   },
   selectArea: {
     width: '100%',
-    maxWidth: Platform.OS === 'web' ? 360 : 300,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: Platform.OS === 'web' ? 28 : 16,
+    maxWidth: Platform.OS === 'web' ? 600 : 340,
+    borderRadius: 14,
+    padding: Platform.OS === 'web' ? 28 : 18,
     marginBottom: 18,
     alignItems: 'center',
     shadowColor: '#7C3AED',
@@ -281,27 +296,14 @@ const styles = StyleSheet.create({
   selectRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
     width: '100%',
   },
   selectLabel: {
     width: 80,
-    fontSize: 16,
-    color: '#7C3AED',
+    fontSize: 13,
     fontWeight: 'bold',
-  },
-  webSelect: {
-    flex: 1,
-    height: 40,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#7C3AED',
-    backgroundColor: '#f8fafc',
-    fontSize: 16,
-    color: '#222',
-    outline: 'none',
-    fontWeight: 'bold',
+    color: '#a78bfa',
   },
   customDropdownButton: {
     flexDirection: 'row',
@@ -309,118 +311,82 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 40,
     borderWidth: 2,
-    borderColor: '#7C3AED',
     borderRadius: 8,
-    backgroundColor: '#f8fafc',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
     marginLeft: 8,
     fontWeight: 'bold',
   },
   customDropdownButtonText: {
-    color: '#7C3AED',
-    fontSize: Platform.OS === 'web' ? 16 : 14,
+    fontSize: 13,
     flex: 1,
     fontWeight: 'bold',
   },
-  placeholderText: {
-    color: '#aaa',
-    fontWeight: 'normal',
-  },
   customDropdownOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   customDropdownModal: {
     width: 240,
-    backgroundColor: '#fff',
     borderRadius: 10,
     paddingVertical: 10,
     elevation: 10,
   },
   customDropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
   customDropdownItemText: {
-    fontSize: Platform.OS === 'web' ? 16 : 14,
-    color: '#7C3AED',
+    fontSize: 13,
     fontWeight: 'bold',
   },
-  startBtn: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 10,
-    paddingVertical: Platform.OS === 'web' ? 14 : 10,
-    paddingHorizontal: Platform.OS === 'web' ? 38 : 24,
-    marginTop: 16,
-    alignSelf: 'center',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  startBtnText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: Platform.OS === 'web' ? 18 : 15,
-  },
-  backBtn: {
-    marginTop: 18,
+  buttonContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 18,
+    gap: 10,
+  },
+  button: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    minWidth: 120,
+    borderRadius: 8,
     alignItems: 'center',
-    padding: 0,
-    backgroundColor: 'transparent',
-    borderRadius: 0,
+    justifyContent: 'center',
   },
-  backBtnText: {
-    color: '#7C3AED',
-    fontWeight: 'bold',
-    fontSize: Platform.OS === 'web' ? 16 : 13,
+  backButton: {
+    borderWidth: 2,
   },
-  title: {
-    fontSize: Platform.OS === 'web' ? 28 : 22,
-    fontWeight: 'bold',
-    color: '#7C3AED',
-    marginBottom: 10,
-    textAlign: 'center',
-    letterSpacing: 1,
+  startButton: {
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  desc: {
-    fontSize: Platform.OS === 'web' ? 17 : 14,
-    color: '#F59E42',
-    marginBottom: 18,
-    textAlign: 'center',
+  buttonText: {
+    fontSize: 13,
     fontWeight: 'bold',
   },
   loader: {
-    marginTop: 40,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  bgCircle1: {
-    position: 'absolute',
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: '#fde68a55', // sarı
-    top: -80,
-    left: Platform.OS === 'web' ? 60 : -100,
-    zIndex: 0,
+  title: {
+    fontSize: Platform.OS === 'web' ? 22 : 17,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
-  bgCircle2: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#fbbf2433', // turuncu
-    bottom: -60,
-    right: Platform.OS === 'web' ? 60 : -60,
-    zIndex: 0,
-  },
-  bgCircle1Dark: {
-    backgroundColor: '#fbbf24aa', // koyu temada canlı turuncu-sarı
-  },
-  bgCircle2Dark: {
-    backgroundColor: '#fde68aaa', // koyu temada canlı sarı-turuncu
+  desc: {
+    fontSize: Platform.OS === 'web' ? 13 : 11,
+    color: '#F59E42',
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
 });

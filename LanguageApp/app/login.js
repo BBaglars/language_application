@@ -4,6 +4,22 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
 import api from '../api';
+import { Ionicons, AntDesign, MaterialIcons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { Animated } from 'react-native';
+
+// LingoSpark yazısı için ayrı bir component
+function LingoSparkLogo({ style = {}, showSpark = true }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', position: 'relative' }}>
+      <Text style={[{ fontSize: 46, fontWeight: '900', color: '#7C3AED', letterSpacing: 1.5, marginRight: 2 }, style]}>Lingo</Text>
+      <Text style={[{ fontSize: 46, fontWeight: '900', color: '#F59E42', letterSpacing: 1.5 }, style]}>Spark</Text>
+      {showSpark && (
+        <Ionicons name="sparkles" size={32} color="#F59E42" style={{ position: 'absolute', right: -38, top: -10 }} />
+      )}
+    </View>
+  );
+}
 
 // Mobil için ayrı bir component
 function MobileEmailLoginScreen() {
@@ -12,6 +28,17 @@ function MobileEmailLoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { setUser, saveToken } = useUser();
+  const [inputFocus, setInputFocus] = useState(false);
+  const [errorAnim] = useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    if (error) {
+      Animated.sequence([
+        Animated.timing(errorAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(errorAnim, { toValue: 0, duration: 200, useNativeDriver: true })
+      ]).start();
+    }
+  }, [error]);
 
   /**
    * GEÇİCİ ÇÖZÜM: Sadece mobilde, e-posta ile girişte backend'e istek atılır.
@@ -41,31 +68,43 @@ function MobileEmailLoginScreen() {
   return (
     <LinearGradient colors={["#7C3AED", "#F59E42"]} style={{ flex: 1 }}>
       <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <View style={styles.centerBoxMobile}>
-          <Text style={styles.logoLingo}>LingoSpark</Text>
+        <BlurView intensity={60} tint="light" style={styles.glassBoxMobile}>
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            <LingoSparkLogo showSpark={true} />
+          </View>
           <Text style={styles.subtitle}>Mobilde sadece e-posta ile giriş</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="E-posta"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
+          <View style={[styles.inputWrapper, inputFocus && styles.inputWrapperActive]}> 
+            <MaterialIcons name="email" size={22} color={inputFocus ? '#7C3AED' : '#aaa'} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.input}
+              placeholder="E-posta"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              onFocus={() => setInputFocus(true)}
+              onBlur={() => setInputFocus(false)}
+              placeholderTextColor="#aaa"
+            />
+          </View>
           <TouchableOpacity
-            style={styles.googleBtn}
+            style={styles.gradientBtn}
             onPress={handleEmailLogin}
             activeOpacity={0.85}
             disabled={loading}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.googleBtnText}>Giriş Yap</Text>
-            )}
+            <LinearGradient colors={["#7C3AED", "#F59E42"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientBtnBg}>
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.gradientBtnText}>Giriş Yap</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-        </View>
+          {error ? (
+            <Animated.Text style={[styles.error, { transform: [{ scale: errorAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }]}>{error}</Animated.Text>
+          ) : null}
+        </BlurView>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -82,6 +121,8 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const router = useRouter();
   const { setUser, saveUser, saveToken } = useUser();
+  const [inputFocus, setInputFocus] = useState(false);
+  const [errorAnim] = useState(new Animated.Value(0));
 
   // Web'e özel importlar
   const { GoogleAuthProvider, signInWithPopup } = require('firebase/auth');
@@ -128,6 +169,15 @@ export default function LoginScreen() {
       }
     };
 
+  React.useEffect(() => {
+    if (error) {
+      Animated.sequence([
+        Animated.timing(errorAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.timing(errorAnim, { toValue: 0, duration: 200, useNativeDriver: true })
+      ]).start();
+    }
+  }, [error]);
+
   // Web için Google ile giriş ekranı
   return (
     <LinearGradient
@@ -136,33 +186,33 @@ export default function LoginScreen() {
       end={{ x: 1, y: 1 }}
       style={styles.gradient}
     >
-      <View style={styles.centerBox}>
+      <BlurView intensity={60} tint="light" style={styles.glassBox}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoWrapper}>
-            <Text style={styles.logoLingo}>Lingo</Text>
-            <Text style={styles.logoSpark}>Spark</Text>
-            <Ionicons.name name="sparkles" size={32} color="#F59E42" style={styles.sparkIcon} />
-          </View>
+          <LingoSparkLogo showSpark={true} />
           <View style={styles.logoDot} />
         </View>
         <Text style={styles.subtitle}>Dünyanın dillerini eğlenceli şekilde öğren!</Text>
         <TouchableOpacity
-          style={styles.googleBtn}
+          style={styles.gradientBtn}
           onPress={handleGoogleLogin}
           activeOpacity={0.85}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <AntDesign.name name="google" size={24} color="#fff" style={{ marginRight: 10 }} />
-              <Text style={styles.googleBtnText}>Google ile Giriş Yap</Text>
-            </>
-          )}
+          <LinearGradient colors={["#7C3AED", "#F59E42"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientBtnBg}>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <AntDesign name="google" size={24} color="#fff" style={{ marginRight: 6 }} />
+                <Text style={styles.gradientBtnText}>Google ile Giriş Yap</Text>
+              </View>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
+        {error ? (
+          <Animated.Text style={[styles.error, { transform: [{ scale: errorAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }]}>{error}</Animated.Text>
+        ) : null}
+      </BlurView>
     </LinearGradient>
   );
 }
@@ -173,41 +223,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  centerBox: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 24,
-    padding: 32,
+  glassBox: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 32,
+    padding: 36,
     alignItems: 'center',
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 8,
-    minWidth: Platform.OS === 'web' ? 400 : 280,
-    maxWidth: 420,
+    shadowRadius: 32,
+    elevation: 12,
+    minWidth: Platform.OS === 'web' ? 420 : 300,
+    maxWidth: 480,
+    margin: 12,
+    borderWidth: 1.5,
+    borderColor: '#a78bfa33',
+    overflow: 'hidden',
+    backdropFilter: 'blur(12px)',
   },
-  centerBoxMobile: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 24,
-    padding: 24,
+  glassBoxMobile: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 32,
+    padding: 28,
     alignItems: 'center',
     shadowColor: '#7C3AED',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowRadius: 32,
+    elevation: 12,
     width: '90%',
-    maxWidth: 400,
+    maxWidth: 420,
+    margin: 12,
+    borderWidth: 1.5,
+    borderColor: '#a78bfa33',
+    overflow: 'hidden',
+    backdropFilter: 'blur(12px)',
   },
-  logoLingo: {
-    fontSize: 42,
+  logoLingoGlow: {
+    fontSize: 46,
     fontWeight: '900',
     color: '#7C3AED',
     letterSpacing: 1.5,
-    textShadowColor: 'rgba(124, 58, 237, 0.2)',
+    textShadowColor: '#a78bfa',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-    marginBottom: 8,
+    textShadowRadius: 16,
+    marginBottom: 0,
+  },
+  logoSparkGlow: {
+    fontSize: 46,
+    fontWeight: '900',
+    color: '#F59E42',
+    letterSpacing: 1.5,
+    textShadowColor: '#F59E42',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 16,
+    marginBottom: 0,
   },
   subtitle: {
     fontSize: 18,
@@ -217,32 +287,55 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '600',
   },
-  input: {
-    width: 240,
-    height: 48,
-    borderColor: '#7C3AED',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  googleBtn: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#7C3AED',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+    borderWidth: 1.5,
+    borderColor: '#a78bfa55',
     borderRadius: 12,
+    backgroundColor: '#fff',
+    paddingHorizontal: 10,
+    marginBottom: 18,
+    width: 260,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+    transition: 'border-color 0.2s',
+  },
+  inputWrapperActive: {
+    borderColor: '#7C3AED',
+    shadowOpacity: 0.18,
+  },
+  input: {
+    flex: 1,
+    height: 48,
+    fontSize: 16,
+    backgroundColor: 'transparent',
+    color: '#232136',
+    paddingHorizontal: 0,
+  },
+  gradientBtn: {
+    width: 260,
+    borderRadius: 14,
     marginBottom: 12,
+    overflow: 'hidden',
     shadowColor: '#F59E42',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 4,
   },
-  googleBtnText: {
+  gradientBtnBg: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 14,
+    width: '100%',
+  },
+  gradientBtnText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: 18,
@@ -262,21 +355,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
-  },
-  logoSpark: {
-    fontSize: 42,
-    fontWeight: '900',
-    color: '#F59E42',
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(245, 158, 66, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  sparkIcon: {
-    position: 'absolute',
-    right: -28,
-    top: -8,
-    transform: [{ rotate: '15deg' }],
   },
   logoDot: {
     width: 8,

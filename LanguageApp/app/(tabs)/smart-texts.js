@@ -1,12 +1,14 @@
 import React from 'react';
-import { View, StyleSheet, Platform, ScrollView, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Platform, ScrollView, TouchableOpacity, Text, Modal, Animated } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import Navbar from '../../components/ui/Navbar';
 import Sidebar from '../../components/ui/Sidebar';
 import Footer from '../../components/ui/Footer';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useUser } from '../../context/UserContext';
 
 const ACCENT = '#7C3AED';
 
@@ -79,12 +81,16 @@ const TextCard = ({ title, description, icon, color, onPress }) => {
         <Text style={[styles.cardDescription, isDark && styles.cardDescriptionDark]}>{description}</Text>
       </View>
       <TouchableOpacity
-        style={[styles.generateButton, { backgroundColor: color }]}
+        style={[styles.generateButton, { backgroundColor: color, flexDirection: 'row', alignItems: 'center', gap: 8 }]}
         onPress={onPress}
         activeOpacity={0.8}
       >
         <MaterialIcons name="add" size={24} color="#fff" />
         <Text style={styles.generateButtonText}>Üret</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 10, paddingVertical: 2, paddingHorizontal: 8, marginLeft: 6, gap: 2 }}>
+          <FontAwesome5 name="trophy" size={18} color="#FBBF24" style={{ marginRight: 2 }} />
+          <Text style={{ color: '#FBBF24', fontWeight: 'bold', fontSize: 15 }}>100</Text>
+        </View>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -97,24 +103,73 @@ const SmartTextsScreen = () => {
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
   const isWeb = Platform.OS === 'web';
+  const { points, spendPoints } = useUser();
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [insufficientModal, setInsufficientModal] = React.useState(false);
+  const [pendingCard, setPendingCard] = React.useState(null);
+  const [modalAnim] = React.useState(new Animated.Value(0));
 
-  const handleGenerate = (card) => {
-    if (card.title === 'Hikaye Üret') {
-      router.push('/texts/StoryGenerate');
+  React.useEffect(() => {
+    if (modalVisible || insufficientModal) {
+      Animated.timing(modalAnim, {
+        toValue: 1,
+        duration: 350,
+        useNativeDriver: true,
+      }).start();
     } else {
-      console.log('Generating text for:', card.title);
+      Animated.timing(modalAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [modalVisible, insufficientModal]);
+
+  const handleGenerate = async (card) => {
+    if (points < 100) {
+      setInsufficientModal(true);
+      return;
+    }
+    setPendingCard(card);
+    setModalVisible(true);
+  };
+
+  const handleConfirm = async () => {
+    if (points >= 100 && pendingCard) {
+      const success = await spendPoints(100);
+      setModalVisible(false);
+      if (!success) {
+        setInsufficientModal(true);
+        return;
+      }
+      // Yönlendirme
+      if (pendingCard.title === 'Hikaye Üret') {
+        router.push('/texts/StoryGenerate');
+      } else if (pendingCard.title === 'Makale Üret') {
+        router.push('/texts/ArticleGenerate');
+      } else if (pendingCard.title === 'Diyalog Üret') {
+        router.push('/texts/DialogGenerate');
+      } else if (pendingCard.title === 'Şiir Üret') {
+        router.push('/texts/PoemGenerate');
+      } else if (pendingCard.title === 'Blog Yazısı') {
+        router.push('/texts/BlogGenerate');
+      } else if (pendingCard.title === 'Haber Üret') {
+        router.push('/texts/NewsGenerate');
+      }
+      setPendingCard(null);
     }
   };
 
   return (
     <>
       <Navbar />
-      <View style={{ flex: 1, backgroundColor: isDark ? '#181825' : '#f8fafc' }}>
+      <LinearGradient
+        colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
         <View style={{ flex: 1, flexDirection: isWeb ? 'row' : 'column', width: '100%', position: 'relative' }}>
-          {/* Arka plan daireleri */}
-          <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
-          <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
-          
           {isWeb && <Sidebar />}
           
           {/* Ana içerik */}
@@ -123,6 +178,8 @@ const SmartTextsScreen = () => {
             contentContainerStyle={styles.contentContainer}
             showsVerticalScrollIndicator={false}
           >
+            <Text style={[styles.pageTitle, { color: isDark ? '#fbbf24' : '#7C3AED' }]}>Akıllı Metinler</Text>
+            <Text style={[styles.pageDesc, { color: isDark ? '#fff' : '#232136' }]}>Yapay zeka ile metin üretmek için bir kart seç!</Text>
             <View style={styles.cardsContainer}>
               {textCards.map((card) => (
                 <TextCard
@@ -144,12 +201,65 @@ const SmartTextsScreen = () => {
             onPress={() => router.push('/texts/TextSetup')}
             activeOpacity={0.9}
           >
-            <MaterialIcons name="settings" size={32} color={ACCENT} />
+            <MaterialIcons name="settings" size={28} color={ACCENT} />
             <Text style={[styles.fabTextLarge, { color: ACCENT }]}>Metin Ayarları</Text>
           </TouchableOpacity>
         </View>
         {!isWeb && <Footer />}
-      </View>
+      </LinearGradient>
+      {/* Onay Modali */}
+      <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0008', opacity: modalAnim }}>
+          <LinearGradient
+            colors={isDark ? ['#232136', '#7C3AEDcc'] : ['#fff', '#a78bfaee']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 0, borderRadius: 28, minWidth: 320, alignItems: 'center', shadowColor: '#7C3AED', shadowOpacity: 0.18, shadowRadius: 24, elevation: 12 }}
+          >
+            <View style={{ alignItems: 'center', padding: 32, width: 320 }}>
+              <View style={{ backgroundColor: isDark ? '#181825' : '#fff', borderRadius: 100, padding: 18, marginBottom: 12, shadowColor: '#a78bfa', shadowOpacity: 0.18, shadowRadius: 16, elevation: 8 }}>
+                <MaterialIcons name="stars" size={48} color={isDark ? '#fbbf24' : '#7C3AED'} />
+              </View>
+              <Text style={{ fontWeight: 'bold', fontSize: 22, color: isDark ? '#fbbf24' : '#7C3AED', marginBottom: 10, textAlign: 'center', letterSpacing: 0.2 }}>Giriş Ücreti</Text>
+              <Text style={{ color: isDark ? '#fff' : '#232136', fontSize: 17, textAlign: 'center', marginBottom: 18, opacity: 0.92 }}>
+                Bu bölüme giriş için <Text style={{ color: '#fbbf24', fontWeight: 'bold' }}>100 puan</Text> harcanacak. Devam etmek istiyor musunuz?
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 18, marginTop: 8 }}>
+                <TouchableOpacity onPress={() => setModalVisible(false)} style={{ backgroundColor: '#F87171', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12, marginRight: 8, shadowColor: '#F87171', shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 17, letterSpacing: 0.2 }}>Vazgeç</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleConfirm} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12, shadowColor: '#7C3AED', shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 17, letterSpacing: 0.2 }}>Evet</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      </Modal>
+      {/* Yetersiz Puan Modali */}
+      <Modal visible={insufficientModal} transparent animationType="fade" onRequestClose={() => setInsufficientModal(false)}>
+        <Animated.View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0008', opacity: modalAnim }}>
+          <LinearGradient
+            colors={isDark ? ['#232136', '#F87171cc'] : ['#fff', '#F87171ee']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ padding: 0, borderRadius: 28, minWidth: 320, alignItems: 'center', shadowColor: '#F87171', shadowOpacity: 0.18, shadowRadius: 24, elevation: 12 }}
+          >
+            <View style={{ alignItems: 'center', padding: 32, width: 320 }}>
+              <View style={{ backgroundColor: isDark ? '#181825' : '#fff', borderRadius: 100, padding: 18, marginBottom: 12, shadowColor: '#F87171', shadowOpacity: 0.18, shadowRadius: 16, elevation: 8 }}>
+                <MaterialIcons name="block" size={48} color={'#F87171'} />
+              </View>
+              <Text style={{ fontWeight: 'bold', fontSize: 22, color: '#F87171', marginBottom: 10, textAlign: 'center', letterSpacing: 0.2 }}>Yetersiz Puan</Text>
+              <Text style={{ color: isDark ? '#fff' : '#232136', fontSize: 17, textAlign: 'center', marginBottom: 18, opacity: 0.92 }}>
+                Üzgünüz, bu bölüme giriş için yeterli puanınız yok.
+              </Text>
+              <TouchableOpacity onPress={() => setInsufficientModal(false)} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 12, shadowColor: '#7C3AED', shadowOpacity: 0.18, shadowRadius: 8, elevation: 4 }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 17, letterSpacing: 0.2 }}>Tamam</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      </Modal>
     </>
   );
 };
@@ -170,7 +280,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   card: {
-    width: 300,
+    width: 260,
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
@@ -180,34 +290,40 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 220,
+    marginBottom: 18,
   },
   cardDark: {
     backgroundColor: '#232136',
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   cardContent: {
-    marginBottom: 20,
+    marginBottom: 6,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   cardTitleDark: {
     color: '#fff',
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     lineHeight: 20,
+    marginBottom: 14,
+    minHeight: 36,
   },
   cardDescriptionDark: {
     color: '#9CA3AF',
@@ -216,50 +332,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 22,
     borderRadius: 12,
     gap: 8,
+    marginTop: 6,
   },
   generateButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
-  },
-  bgCircle1: {
-    position: 'absolute',
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    top: -80,
-    right: 40,
-    zIndex: 0,
-    backgroundColor: '#a78bfa33',
-  },
-  bgCircle1Dark: {
-    backgroundColor: '#fbbf24aa',
-  },
-  bgCircle2: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    bottom: -60,
-    left: 100,
-    zIndex: 0,
-    backgroundColor: '#f472b633',
-  },
-  bgCircle2Dark: {
-    backgroundColor: '#fde68aaa',
   },
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 24,
+    right: 8,
+    bottom: 90,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 18,
-    borderRadius: 40,
+    height: 56,
+    paddingHorizontal: 18,
+    borderRadius: 28,
     shadowColor: '#7C3AED',
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -273,9 +365,23 @@ const styles = StyleSheet.create({
     borderColor: '#a78bfa',
   },
   fabTextLarge: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     letterSpacing: 0.2,
+  },
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 4,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+  pageDesc: {
+    fontSize: 15,
+    textAlign: 'center',
+    marginBottom: 18,
+    opacity: 0.85,
   },
 });
 

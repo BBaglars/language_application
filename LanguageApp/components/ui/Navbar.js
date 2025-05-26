@@ -4,10 +4,11 @@ import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { useUser } from '../../context/UserContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ThemeModal = React.lazy(() => import('./ThemeModal'));
 
-export default function Navbar() {
+export default function Navbar({ pageTitle }) {
   const isWeb = Platform.OS === 'web';
   const { theme, setTheme } = useTheme ? useTheme() : { theme: 'light', setTheme: () => {} };
   const deviceColorScheme = useDeviceColorScheme ? useDeviceColorScheme() : 'light';
@@ -21,40 +22,37 @@ export default function Navbar() {
   };
 
   return (
-    <View style={[
-      styles.navbar,
-      !isWeb && styles.navbarMobile,
-      isDark && styles.navbarDark
-    ]}>
+    <LinearGradient
+      colors={isDark ? ['#181825', '#232136', '#7C3AED'] : ['#f8fafc', '#e0e7ff', '#a78bfa']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={[
+        styles.navbar,
+        !isWeb && styles.navbarMobile,
+        isDark && styles.navbarDark
+      ]}
+    >
       <View style={styles.leftSection}>
         <View style={styles.logoContainer}>
           <View style={styles.logoWrapper}>
             <Text style={[styles.logoLingo, isDark && styles.logoDark]}>Lingo</Text>
             <Text style={[styles.logoSpark, isDark && styles.logoDark]}>Spark</Text>
-            <Ionicons name="sparkles" size={24} color={isDark ? "#fff" : "#F59E42"} style={styles.sparkIcon} />
+            <Ionicons name="sparkles" size={28} color={isDark ? "#fff" : "#F59E42"} style={styles.sparkIcon} />
           </View>
         </View>
       </View>
+      {pageTitle && (
+        <View style={styles.centerSection}>
+          <Text style={[styles.pageTitle, isDark && styles.pageTitleDark]}>{pageTitle}</Text>
+        </View>
+      )}
       <View style={styles.rightSection}>
-        <View style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: isDark ? '#232136' : '#fffbe6',
-          borderRadius: 18,
-          paddingVertical: 7,
-          paddingHorizontal: 18,
-          shadowColor: '#FBBF24',
-          shadowOpacity: 0.13,
-          shadowRadius: 8,
-          elevation: 4,
-          borderWidth: 2,
-          borderColor: '#FBBF24',
-        }}>
+        <View style={[styles.pointsBox, isDark && styles.pointsBoxDark]}>
           <MaterialIcons name="emoji-events" size={24} color="#FBBF24" style={{ marginRight: 7 }} />
-          <Text style={{ fontWeight: 'bold', fontSize: 17, color: isDark ? '#FBBF24' : '#b45309', letterSpacing: 1 }}>{points}</Text>
+          <Text style={[styles.pointsText, isDark && styles.pointsTextDark]}>{points}</Text>
         </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -63,28 +61,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    backgroundColor: '#7C3AED',
+    paddingVertical: 26,
+    paddingHorizontal: 40,
+    backgroundColor: 'transparent',
     borderBottomWidth: 0,
     shadowColor: '#7C3AED',
     shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
     zIndex: 10,
   },
   navbarDark: {
-    backgroundColor: '#232136',
+    backgroundColor: 'transparent',
     shadowColor: '#232136',
     zIndex: 10,
   },
   navbarMobile: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
   },
   logoContainer: {
     alignItems: 'center',
@@ -95,16 +93,16 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   logoLingo: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '900',
     color: '#fff',
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.18)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    textShadowRadius: 6,
   },
   logoSpark: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: '900',
     color: '#F59E42',
     letterSpacing: 1.5,
@@ -139,5 +137,51 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  pointsBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 22,
+    paddingVertical: Platform.OS === 'web' ? 10 : 6,
+    paddingHorizontal: Platform.OS === 'web' ? 28 : 14,
+    shadowColor: '#FBBF24',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#FBBF24',
+  },
+  pointsBoxDark: {
+    backgroundColor: '#232136',
+    borderColor: '#FBBF24',
+    shadowColor: '#FBBF24',
+  },
+  pointsText: {
+    fontWeight: 'bold',
+    fontSize: Platform.OS === 'web' ? 21 : 15,
+    color: '#b45309',
+    letterSpacing: 1.2,
+  },
+  pointsTextDark: {
+    color: '#FBBF24',
+  },
+  centerSection: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pageTitle: {
+    fontSize: Platform.OS === 'web' ? 22 : 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    letterSpacing: 1.1,
+    textShadowColor: 'rgba(0,0,0,0.13)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  pageTitleDark: {
+    color: '#fbbf24',
+    textShadowColor: '#232136',
   },
 }); 

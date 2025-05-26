@@ -8,6 +8,7 @@ import { useTheme } from '../../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { useTextSettings } from '../../../context/TextSettingsContext';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const LEVELS = [
   { label: 'A1', value: 'A1' },
@@ -60,7 +61,7 @@ const SelectComponent = ({ value, setValue, items, placeholder, open, setOpen, o
   return (
     <>
       <TouchableOpacity
-        style={[styles.customDropdownButton, { borderColor }]}
+        style={[styles.customDropdownButton, { borderColor, backgroundColor: dropdownBg }]}
         onPress={() => {
           setOpen(true);
           if (onOpen) onOpen();
@@ -82,22 +83,24 @@ const SelectComponent = ({ value, setValue, items, placeholder, open, setOpen, o
           onPressOut={() => setOpen(false)}
         >
           <View style={styles.customDropdownModal}>
-            <FlatList
-              data={items}
-              keyExtractor={item => item.value}
-              style={{ maxHeight }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.customDropdownItem, { borderColor }]}
-                  onPress={() => {
-                    setValue(item.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Text style={[styles.customDropdownItemText, { color: textColor }]}>{item.label}</Text>
-                </TouchableOpacity>
-              )}
-            />
+            <View style={[styles.customDropdownModal, { backgroundColor: dropdownBg }]}>
+              <FlatList
+                data={items}
+                keyExtractor={item => item.value}
+                style={{ maxHeight }}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={[styles.customDropdownItem, { borderColor }]}
+                    onPress={() => {
+                      setValue(item.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Text style={[styles.customDropdownItemText, { color: textColor }]}>{item.label}</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -146,13 +149,13 @@ export default function TextSetup({ onStart = () => {}, onBack = () => {}, textT
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
   const mainBg = isDark ? '#181825' : '#f8fafc';
-  const cardBg = isDark ? '#232136' : '#fff';
-  const textColor = isDark ? '#fff' : '#222';
-  const accent = '#7C3AED';
-  const borderColor = isDark ? '#a78bfa' : '#7C3AED';
+  const cardBg = isDark ? '#232136' : '#f3f4fa';
+  const textColor = isDark ? '#fff' : '#232136';
+  const accent = isDark ? '#fbbf24' : '#7C3AED';
+  const borderColor = isDark ? '#fbbf24' : '#a78bfa';
   const dropdownBg = isDark ? '#232136' : '#fff';
-  const placeholderColor = isDark ? '#aaa' : '#aaa';
-  const dropdownOverlayBg = isDark ? 'rgba(35,33,54,0.85)' : 'rgba(255,255,255,0.85)';
+  const placeholderColor = isDark ? '#e0e7ff' : '#a78bfa';
+  const dropdownOverlayBg = isDark ? 'rgba(35,33,54,0.85)' : 'rgba(124,58,237,0.10)';
 
   useEffect(() => {
     fetchData();
@@ -350,12 +353,19 @@ export default function TextSetup({ onStart = () => {}, onBack = () => {}, textT
   return (
     <>
       <Navbar />
-      <View style={[styles.container, { backgroundColor: mainBg }]}>
-        <View style={styles.content}>
-          {isWeb && <Sidebar />}
-          {renderContent()}
+      <LinearGradient
+        colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={[styles.container, { backgroundColor: 'transparent' }]}> 
+          <View style={styles.content}>
+            {isWeb && <Sidebar />}
+            {renderContent()}
+          </View>
         </View>
-      </View>
+      </LinearGradient>
     </>
   );
 }
@@ -377,47 +387,46 @@ const styles = StyleSheet.create({
   selectArea: {
     width: '100%',
     maxWidth: 500,
-    padding: 24,
-    borderRadius: 20,
+    padding: 16,
+    borderRadius: 14,
     shadowOpacity: 0.1,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
   },
   desc: {
-    fontSize: 16,
-    marginBottom: 24,
+    fontSize: 13,
+    marginBottom: 18,
     textAlign: 'center',
   },
   selectRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   selectLabel: {
     width: 80,
-    fontSize: 16,
-    color: '#666',
+    fontSize: 13,
+    color: '#a78bfa',
   },
   customDropdownButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
     borderWidth: 2,
-    backgroundColor: '#fff',
   },
   customDropdownButtonText: {
-    fontSize: 16,
+    fontSize: 13,
   },
   customDropdownOverlay: {
     flex: 1,
@@ -427,9 +436,8 @@ const styles = StyleSheet.create({
   customDropdownModal: {
     width: '90%',
     maxWidth: 400,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 10,
+    padding: 10,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 10,
@@ -437,24 +445,24 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   customDropdownItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   customDropdownItemText: {
-    fontSize: 16,
+    fontSize: 13,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 24,
-    gap: 16,
+    marginTop: 18,
+    gap: 10,
   },
   button: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -469,7 +477,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   buttonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: 'bold',
   },
   loader: {

@@ -25,15 +25,15 @@ function normalizeWord(word) {
   return word?.toLowerCase().replace(/[^a-zA-ZğüşöçıİĞÜŞÖÇ0-9]/g, '').trim();
 }
 
-export default function StoryGenerate() {
+export default function PoemGenerate() {
   const { theme } = useTheme();
   const deviceColorScheme = useColorScheme();
   const colorScheme = theme === 'system' ? deviceColorScheme : theme;
   const isDark = colorScheme === 'dark';
   const isWeb = Platform.OS === 'web';
   const { settings } = useTextSettings();
-  const [storyTitle, setStoryTitle] = useState('Bir Günlük Macera');
-  const [storyContent, setStoryContent] = useState('Ali sabah erkenden uyandı. Bugün çok heyecanlıydı çünkü okulda hikaye yarışması vardı. Annesi ona güzel bir kahvaltı hazırladı. Ali, en sevdiği kalemini alıp okula koştu...');
+  const [storyTitle, setStoryTitle] = useState('Bir Şiir');
+  const [storyContent, setStoryContent] = useState('Güneş doğar, umutla başlar gün\nKuşlar uçar, gökyüzünde süzülür\nHer yeni sabah, yeni bir öykü\nHayat başlar, umutla büyür.');
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
@@ -47,14 +47,12 @@ export default function StoryGenerate() {
       const ids = storyUsedWords.map(w => w.id);
       api.post('/words/meanings', { ids })
         .then(res => {
-          console.log('Anlamlar API yanıtı:', res.data);
           const meaningsArr = res.data.data?.meanings || [];
           const map = {};
           meaningsArr.forEach(m => { map[normalizeWord(m.text)] = m.meaning; });
           setMeanings(map);
         })
-        .catch(err => {
-          console.error('Anlamlar API hatası:', err);
+        .catch(() => {
           setMeanings({});
         });
     }
@@ -91,7 +89,7 @@ export default function StoryGenerate() {
                 <ReadonlyDropdown label="Uzunluk" value={settings.lengthLabel} />
                 <ReadonlyDropdown label="Amaç" value={settings.purposeLabel} />
                 <ReadonlyDropdown label="Kategori" value={settings.catLabel} />
-                <ReadonlyDropdown label="Tür" value="Hikaye" />
+                <ReadonlyDropdown label="Tür" value="Şiir" />
                 <ReadonlyDropdown label="Hedef Yaş Grubu" value={settings.ageGroupLabel} />
                 <ReadonlyDropdown label="Kelime Sayısı" value={settings.wordCountLabel || settings.wordCount} />
                 {!isWeb && showSettings && (
@@ -135,7 +133,7 @@ export default function StoryGenerate() {
                       const response = await api.post('/generation/generate', {
                         language: settings.langCode,
                         difficultyLevel: settings.level,
-                        type: settings.type,
+                        type: 'poem',
                         length: settings.length,
                         purpose: settings.purpose,
                         categoryId: Number(settings.cat),
@@ -143,7 +141,6 @@ export default function StoryGenerate() {
                         ageGroup: settings.ageGroup
                       });
                       const data = response.data;
-                      console.log('API yanıtı:', data);
                       setStoryTitle(data.data?.story?.title || 'Başlık');
                       setStoryContent(data.data?.story?.content || '');
                       setStoryUsedWords(data.data?.story?.usedWords || []);
@@ -151,7 +148,6 @@ export default function StoryGenerate() {
                     } catch (error) {
                       setStoryTitle('Hata');
                       setStoryContent('Metin üretilemedi.');
-                      console.error('Error:', error);
                     } finally {
                       setLoading(false);
                     }

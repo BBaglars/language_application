@@ -10,6 +10,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { useUser } from '../../context/UserContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const mockUser = {
   id: 1,
@@ -89,6 +90,82 @@ const mockGameResults = [
 
 const STORAGE_KEY = 'game-setup-selection';
 
+const GAMES = [
+  {
+    type: 'LINGO',
+    title: 'Lingo Oyunu',
+    desc: 'Harfleri tahmin ederek kelimeyi bul.',
+    icon: 'lightbulb',
+    color: '#7C3AED',
+    accent: ['#f7971e', '#ffd200'],
+  },
+  {
+    type: 'WORD_MATCH',
+    title: 'Eşleştirme Oyunu',
+    desc: 'Kelimeleri anlamlarıyla eşleştir.',
+    icon: 'extension',
+    color: '#EC4899',
+    accent: ['#43e97b', '#38f9d7'],
+  },
+  {
+    type: 'WORD_SEARCH',
+    title: 'Kelime Bulmaca',
+    desc: 'Gizlenmiş kelimeleri bul.',
+    icon: 'search',
+    color: '#3B82F6',
+    accent: ['#6a11cb', '#2575fc'],
+  },
+  {
+    type: 'WORD_SCRAMBLE',
+    title: 'Kelime Karıştırma',
+    desc: 'Karışık harfleri doğru sıraya diz!',
+    icon: 'shuffle',
+    color: '#f43f5e',
+    accent: ['#f43f5e', '#fbbf24'],
+  },
+  {
+    type: 'TRANSLATION',
+    title: 'Çeviri Oyunu',
+    desc: 'Kelimeleri doğru dile çevir.',
+    icon: 'translate',
+    color: '#10B981',
+    accent: ['#fa709a', '#fee140'],
+  },
+  {
+    type: 'STORY_COMPLETION',
+    title: 'Hikaye Tamamlama',
+    desc: 'Eksik kelimeleri tamamla.',
+    icon: 'menu-book',
+    color: '#F59E0B',
+    accent: ['#30cfd0', '#330867'],
+  },
+];
+
+const GameCard = ({ game, onPress, isDark }) => (
+  <TouchableOpacity
+    style={[
+      styles.card,
+      { borderColor: game.color, backgroundColor: isDark ? '#232136' : '#fff', shadowColor: game.color + '55' }
+    ]}
+    onPress={onPress}
+    activeOpacity={0.92}
+  >
+    <View style={[styles.iconCircle, { backgroundColor: game.color + '15' }]}> 
+      <MaterialIcons name={game.icon} size={36} color={game.color} />
+    </View>
+    <Text style={[styles.cardTitle, isDark && { color: '#fff' }]}>{game.title}</Text>
+    <Text style={[styles.cardDesc, isDark && { color: '#cbd5e1' }]}>{game.desc}</Text>
+    <TouchableOpacity
+      style={[styles.playButton, { backgroundColor: game.color }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <MaterialIcons name="play-arrow" size={22} color="#fff" />
+      <Text style={styles.playButtonText}>Oyna</Text>
+    </TouchableOpacity>
+  </TouchableOpacity>
+);
+
 export default function GamesScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -130,6 +207,19 @@ export default function GamesScreen() {
     }
   };
 
+  const handleGamePress = (game) => {
+    if (game.type === 'TRANSLATION' || game.type === 'STORY_COMPLETION') {
+      // Hiçbir şey yapma
+      return;
+    }
+    if (game.type === 'LINGO') router.push('/games/lingo');
+    else if (game.type === 'WORD_MATCH') router.push('/games/MatchingGame');
+    else if (game.type === 'WORD_SEARCH') router.push('/games/WordSearchGame');
+    else if (game.type === 'WORD_SCRAMBLE') router.push('/games/WordScramble');
+    else if (game.type === 'TRANSLATION') router.push('/games/TranslationGame');
+    else if (game.type === 'STORY_COMPLETION') router.push('/games/StoryCompletion');
+  };
+
   if (loading) {
     return <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />;
   }
@@ -158,321 +248,162 @@ export default function GamesScreen() {
   return (
     <>
       <Navbar />
-      <View style={{
-        flexDirection: isWeb ? 'row' : 'column',
-        width: '100%',
-        flex: 1,
-        position: 'relative',
-        backgroundColor: isDark ? '#181825' : '#f8fafc',
-      }}>
-        {/* Arka plan daireleri */}
-        <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
-        <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
+      <LinearGradient
+        colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <View style={{ flex: 1, flexDirection: isWeb ? 'row' : 'column', width: '100%', position: 'relative' }}>
         {isWeb && <Sidebar />}
         <ScrollView
-          style={{ flex: 1, backgroundColor: 'transparent' }}
-          contentContainerStyle={{ minHeight: '100%', alignItems: 'center', paddingBottom: isWeb ? 100 : 130 }}
+            style={styles.container}
+            contentContainerStyle={styles.contentContainer}
+            showsVerticalScrollIndicator={false}
         >
-          <Text style={isDark ? styles.welcomeDark : styles.welcome}>Merhaba, {user?.name || 'Kullanıcı'}! 🎮</Text>
-          <Text style={isDark ? styles.subtitleDark : styles.subtitle}>Bugün hangi oyunla pratik yapmak istersin?</Text>
-          <View style={styles.gamesGrid}>
-            {gameTypes.map((game, idx) => (
-              <TouchableOpacity
+            <Text style={[styles.pageTitle, { color: isDark ? '#fbbf24' : '#7C3AED' }]}>Oyunlar</Text>
+            <Text style={[styles.pageDesc, { color: isDark ? '#fff' : '#232136' }]}>Pratik yapmak için bir oyun seç!</Text>
+            <View style={styles.cardsGrid}>
+              {GAMES.map((game) => (
+                <GameCard
                 key={game.type}
-                style={styles.gameCardWrapper}
-                activeOpacity={0.93}
-                onPress={() => {
-                  if (game.type === 'LINGO') {
-                    router.push({ pathname: '/games/lingo', params: {
-                      lang: gameSetup.lang,
-                      langLabel: gameSetup.langLabel,
-                      cat: gameSetup.cat,
-                      catLabel: gameSetup.catLabel,
-                      level: gameSetup.level,
-                      levelLabel: gameSetup.levelLabel
-                    }});
-                  } else if (game.type === 'WORD_MATCH') {
-                    router.push('/games/MatchingGame');
-                  } else if (game.type === 'WORD_SEARCH') {
-                    router.push('/games/WordSearchGame');
-                  } else if (game.type === 'WORD_SCRAMBLE') {
-                    router.push('/games/WordScramble');
-                  } else {
-                    setSelectedGame(game);
-                  }
-                }}
-              >
-                <View style={[
-                  styles.gameCard,
-                  game.highlight && styles.lingoCard,
-                  { backgroundColor: game.colors[0] },
-                  isDark && styles.gameCardDark
-                ]}>
-                  <View style={[styles.iconCircle, game.highlight && styles.lingoIconCircle]}>
-                    <Text style={styles.gameIcon}>{game.icon}</Text>
-                  </View>
-                  {game.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Yeni</Text></View>}
-                  <Text style={isDark ? styles.gameTitleDark : styles.gameTitle}>{game.title}</Text>
-                  <Text style={isDark ? styles.gameDescDark : styles.gameDesc}>{game.desc}</Text>
-                  <TouchableOpacity 
-                    style={isDark ? styles.startBtnDark : styles.startBtn}
-                    onPress={() => {
-                      if (game.type === 'LINGO') {
-                        router.push({ pathname: '/games/lingo', params: {
-                          lang: gameSetup.lang,
-                          langLabel: gameSetup.langLabel,
-                          cat: gameSetup.cat,
-                          catLabel: gameSetup.catLabel,
-                          level: gameSetup.level,
-                          levelLabel: gameSetup.levelLabel
-                        }});
-                      } else if (game.type === 'WORD_MATCH') {
-                        router.push('/games/MatchingGame');
-                      } else if (game.type === 'WORD_SEARCH') {
-                        router.push('/games/WordSearchGame');
-                      } else if (game.type === 'WORD_SCRAMBLE') {
-                        router.push('/games/WordScramble');
-                      } else {
-                        setSelectedGame(game);
-                      }
-                    }}
-                  >
-                    <Text style={isDark ? styles.startBtnTextDark : styles.startBtnText}>Başla</Text>
-                  </TouchableOpacity>
-                </View>
-              </TouchableOpacity>
+                  game={game}
+                  onPress={() => handleGamePress(game)}
+                  isDark={isDark}
+                />
             ))}
           </View>
         </ScrollView>
-        {/* FAB - Ayarları Değiştir */}
+          {/* Oyun Ayarları FAB */}
         <TouchableOpacity
-          style={[styles.fab, !isWeb && styles.fabMobile]}
-          onPress={() => setShowSetup(true)}
-          activeOpacity={0.85}
+            style={[
+              styles.fab,
+              isDark && styles.fabDark,
+              { backgroundColor: isDark ? '#232136' : '#fff' }
+            ]}
+            onPress={() => router.push('/games/GameSetup')}
+            activeOpacity={0.9}
         >
-          <MaterialIcons name="settings" size={isWeb ? 32 : 28} color="#fff" />
-          <Text style={styles.fabLabel}>Oyun Ayarları</Text>
+            <MaterialIcons name="settings" size={28} color={isDark ? '#fbbf24' : '#7C3AED'} />
+            <Text style={[styles.fabLabel, { color: isDark ? '#fbbf24' : '#7C3AED' }]}>Oyun Ayarları</Text>
         </TouchableOpacity>
       </View>
       {!isWeb && <Footer />}
+      </LinearGradient>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 20 },
-  welcome: { fontSize: 26, fontWeight: 'bold', color: '#4F46E5', marginTop: 20, textAlign: 'center' },
-  subtitle: { fontSize: 17, color: '#666', marginBottom: 18, textAlign: 'center' },
-  welcomeDark: { fontSize: 26, fontWeight: 'bold', color: '#fff', marginTop: 20, textAlign: 'center' },
-  subtitleDark: { fontSize: 17, color: '#cbd5e1', marginBottom: 18, textAlign: 'center' },
-  gamesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 28,
-    marginTop: 36,
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
-  gameCardWrapper: {
-    margin: 0,
+  contentContainer: {
+    paddingTop: 20,
+    paddingBottom: 100,
   },
-  gameCard: {
-    width: 260,
-    minHeight: 340,
-    maxHeight: 340,
-    borderRadius: 22,
-    padding: 26,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    elevation: 8,
-    position: 'relative',
-    marginBottom: 0,
-  },
-  lingoCard: {
-    borderWidth: 3,
-    borderColor: '#f7971e',
-    shadowColor: '#f7971e',
-    shadowOpacity: 0.25,
-    shadowRadius: 24,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.10,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  lingoIconCircle: {
-    backgroundColor: '#fffbe6',
-    borderWidth: 2,
-    borderColor: '#ffd200',
-  },
-  gameIcon: {
-    fontSize: 44,
-    marginBottom: 0,
-  },
-  gameTitle: {
-    fontSize: 22,
+  pageTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+    marginTop: 16,
+    marginBottom: 4,
     textAlign: 'center',
-    textShadowColor: '#0002',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    letterSpacing: 0.2,
   },
-  gameDesc: {
-    fontSize: 16,
-    color: '#f3f4f6',
+  pageDesc: {
+    fontSize: 15,
     textAlign: 'center',
     marginBottom: 18,
+    opacity: 0.85,
   },
-  startBtn: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 32,
+  cardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+    justifyContent: 'center',
     marginTop: 10,
-    alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
   },
-  startBtnText: {
-    color: '#f7971e',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  newBadge: {
-    position: 'absolute',
-    top: 14,
-    right: 18,
+  card: {
+    width: 260,
     backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    zIndex: 10,
-    shadowColor: '#000',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 2,
     shadowOpacity: 0.10,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+    marginBottom: 18,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 220,
   },
-  newBadgeText: {
-    color: '#f7971e',
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#7C3AED',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  cardDesc: {
     fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 14,
+    minHeight: 36,
+  },
+  playButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 22,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 6,
+  },
+  playButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  fab: {
+    position: 'absolute',
+    right: 8,
+    bottom: 90,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    paddingHorizontal: 18,
+    borderRadius: 28,
+    shadowColor: '#7C3AED',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 7,
+    borderWidth: 2,
+    borderColor: '#7C3AED',
+    gap: 12,
+  },
+  fabDark: {
+    borderColor: '#fbbf24',
+  },
+  fabLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 0.2,
   },
   mockGameContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 24 },
   mockGameTitle: { fontSize: 24, fontWeight: 'bold', color: '#4F46E5', marginBottom: 12 },
   mockGameDesc: { fontSize: 16, color: '#444', marginBottom: 24, textAlign: 'center' },
   mockGameBtn: { backgroundColor: '#4F46E5', paddingVertical: 12, paddingHorizontal: 28, borderRadius: 10 },
-  fab: {
-    position: 'absolute',
-    right: 24,
-    bottom: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: undefined,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#7C3AED',
-    paddingHorizontal: 24,
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-    zIndex: 100,
-  },
-  fabMobile: {
-    bottom: 90,
-    height: 56,
-    borderRadius: 28,
-    paddingHorizontal: 18,
-    right: 8,
-  },
-  fabLabel: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-    marginLeft: 14,
-    letterSpacing: 0.5,
-  },
-  bgCircle1: {
-    position: 'absolute',
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: '#38bdf833', // mavi-yeşil
-    top: -80,
-    left: Platform.OS === 'web' ? 60 : -100,
-    zIndex: 0,
-  },
-  bgCircle2: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: '#60a5fa33', // mavi
-    bottom: -60,
-    right: Platform.OS === 'web' ? 60 : -60,
-    zIndex: 0,
-  },
-  gameCardDark: {
-    borderWidth: 2,
-    borderColor: '#232136',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    backgroundColor: '#232136',
-  },
-  gameTitleDark: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
-    textAlign: 'center',
-    textShadowColor: '#0002',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  gameDescDark: {
-    fontSize: 16,
-    color: '#cbd5e1',
-    textAlign: 'center',
-    marginBottom: 18,
-  },
-  startBtnDark: {
-    backgroundColor: '#7C3AED',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 32,
-    marginTop: 10,
-    alignSelf: 'center',
-    shadowColor: '#7C3AED',
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  startBtnTextDark: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  bgCircle1Dark: {
-    backgroundColor: '#38bdf8aa',
-  },
-  bgCircle2Dark: {
-    backgroundColor: '#60a5faaa',
-  },
 }); 

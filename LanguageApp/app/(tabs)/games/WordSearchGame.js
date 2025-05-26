@@ -20,6 +20,11 @@ import { MaterialIcons } from '@expo/vector-icons';
 import api from '../../../api';
 import * as Animatable from 'react-native-animatable';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { FontAwesome5 } from '@expo/vector-icons';
+import ConfettiCannon from 'react-native-confetti-cannon';
+import { Easing } from 'react-native-reanimated';
 
 const GRID_SIZE = 8; // 8x8 grid
 const { width } = Dimensions.get('window');
@@ -97,6 +102,9 @@ export default function WordSearchGame() {
   const [showTimeUpModal, setShowTimeUpModal] = useState(false);
   const [congratsDuration, setCongratsDuration] = useState(null);
   const [initialTime, setInitialTime] = useState(90);
+  const [timerShakeAnim] = useState(new Animated.Value(0));
+  const [modalScaleAnim] = useState(new Animated.Value(0.8));
+  const [showConfettiAnim, setShowConfettiAnim] = useState(false);
 
   // Tüm kelimelerin bulunup bulunmadığını kontrol eden değişken
   const allWordsFound = words.length > 0 && words.every(word => word.found);
@@ -257,6 +265,33 @@ export default function WordSearchGame() {
     const timer = setTimeout(() => setTimeLeft(t => t - 1), 1000);
     return () => clearTimeout(timer);
   }, [gameStarted, timeLeft, allWordsFound, timeUp]);
+
+  // Timer azaldığında shake animasyonu
+  useEffect(() => {
+    if (timeLeft !== null && timeLeft <= 7 && !allWordsFound && !timeUp) {
+      Animated.sequence([
+        Animated.timing(timerShakeAnim, { toValue: 1, duration: 80, useNativeDriver: true }),
+        Animated.timing(timerShakeAnim, { toValue: -1, duration: 80, useNativeDriver: true }),
+        Animated.timing(timerShakeAnim, { toValue: 0, duration: 80, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [timeLeft, allWordsFound, timeUp]);
+
+  // Modal açılışında scale ve confetti animasyonu
+  useEffect(() => {
+    if (showCongratsModal || showTimeUpModal) {
+      Animated.spring(modalScaleAnim, {
+        toValue: 1,
+        friction: 5,
+        tension: 80,
+        useNativeDriver: true,
+      }).start();
+      setShowConfettiAnim(true);
+    } else {
+      modalScaleAnim.setValue(0.8);
+      setShowConfettiAnim(false);
+    }
+  }, [showCongratsModal, showTimeUpModal]);
 
   // Grid oluşturma fonksiyonu
   const generateGrid = () => {
@@ -746,11 +781,11 @@ export default function WordSearchGame() {
       borderRadius: 8,
       paddingVertical: 4,
       paddingHorizontal: 14,
-      marginRight: isWeb ? 24 : 12,
-      shadowColor: '#7C3AED',
-      shadowOpacity: 0.08,
+      marginRight: isWeb ? 200 : 12,
+      shadowColor: '#F87171',
+      shadowOpacity: 0.15,
       shadowRadius: 8,
-      elevation: 2,
+      elevation: 4,
       borderWidth: 2,
       borderColor: '#7C3AED',
     },
@@ -970,41 +1005,94 @@ export default function WordSearchGame() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
-      <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
-      <View style={[styles.bgCircle3, isDark && styles.bgCircle3Dark]} />
+    <LinearGradient
+      colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
+        <View style={[styles.bgCircle1, isDark && styles.bgCircle1Dark]} />
+        <View style={[styles.bgCircle2, isDark && styles.bgCircle2Dark]} />
+        <View style={[styles.bgCircle3, isDark && styles.bgCircle3Dark]} />
 
-      <View style={styles.headerBoxRow}>
-        {isWeb ? (
-          <View style={{
-            width: '100%',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 10,
-            position: 'relative',
-          }}>
-            {/* Web için geri tuşu */}
-            <TouchableOpacity
-              style={styles.webBackButton}
-              onPress={() => {
-                if (window.history.length > 1) {
-                  router.back();
-                } else {
-                  router.push('/games');
-                }
-              }}
-            >
-              <MaterialIcons name="arrow-back" size={28} color={theme.header} />
-            </TouchableOpacity>
+        <View style={styles.headerBoxRow}>
+          {isWeb ? (
+            <View style={{
+              width: '100%',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 10,
+              position: 'relative',
+            }}>
+              {/* Web için geri tuşu */}
+              <TouchableOpacity
+                style={styles.webBackButton}
+                onPress={() => {
+                  if (window.history.length > 1) {
+                    router.back();
+                  } else {
+                    router.push('/games');
+                  }
+                }}
+              >
+                <MaterialIcons name="arrow-back" size={28} color={theme.header} />
+              </TouchableOpacity>
 
-            {/* Timer ve puan kutusu ortada */}
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              {/* Timer ve puan kutusu ortada */}
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                {/* Timer kutusu */}
+                <Animated.View style={[styles.timerBox, {
+                  marginRight: isWeb ? 200 : 12,
+                  shadowColor: '#F87171',
+                  shadowOpacity: timeLeft <= 7 ? 0.5 : 0.15,
+                  shadowRadius: timeLeft <= 7 ? 16 : 8,
+                  elevation: 4,
+                  borderColor: timeLeft <= 7 ? '#F87171' : '#7C3AED',
+                  transform: [{ translateX: timerShakeAnim.interpolate({ inputRange: [-1, 1], outputRange: [-6, 6] }) }],
+                }]}> 
+                  <Text style={[styles.timerText, timeLeft <= 10 && styles.timerTextDanger]}>{formatTime(timeLeft)}</Text>
+                </Animated.View>
+                {/* Puan kutusu */}
+                <View style={{
+                  backgroundColor: isDark ? '#232136' : '#fff',
+                  borderRadius: 16,
+                  paddingTop: 0,
+                  paddingBottom: 8,
+                  paddingHorizontal: 22,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  boxShadow: '0 2px 12px 0 rgba(124,58,237,0.08)',
+                  borderWidth: 2,
+                  borderColor: isDark ? '#10B981' : '#FBBF24',
+                  marginLeft: isWeb ? 200 : 100,
+                }}>
+                  <MaterialIcons name="emoji-events" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
+                  <Text style={{fontWeight:'bold',fontSize:22,color: isDark ? '#10B981' : '#FBBF24',letterSpacing:1}}>{earnedPoints}</Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            // Mobilde tüm kutuların üstten boşluğunu eşit olarak artır
+            <View style={{
+              width: '100%',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 16,
+              marginTop: 32,
+              marginBottom: 10,
+            }}>
+              <TouchableOpacity style={styles.mobileBackButton} onPress={() => router.back()}>
+                <MaterialIcons name="arrow-back" size={28} color={theme.header} />
+              </TouchableOpacity>
+              
               {/* Timer kutusu */}
-              <View style={[styles.timerBox, {marginRight: 200}]}> 
+              <View style={[styles.timerBox, {marginLeft: 0}]}> 
                 <Text style={[styles.timerText, timeLeft <= 10 && styles.timerTextDanger]}>{formatTime(timeLeft)}</Text>
               </View>
+              
               {/* Puan kutusu */}
               <View style={{
                 backgroundColor: isDark ? '#232136' : '#fff',
@@ -1017,197 +1105,159 @@ export default function WordSearchGame() {
                 boxShadow: '0 2px 12px 0 rgba(124,58,237,0.08)',
                 borderWidth: 2,
                 borderColor: isDark ? '#10B981' : '#FBBF24',
-                marginLeft: 200,
+                marginLeft: 100,
               }}>
-                <MaterialIcons name="star" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
+                <MaterialIcons name="emoji-events" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
                 <Text style={{fontWeight:'bold',fontSize:22,color: isDark ? '#10B981' : '#FBBF24',letterSpacing:1}}>{earnedPoints}</Text>
               </View>
             </View>
+          )}
+        </View>
+
+        <View style={styles.selectedInfoBox}>
+          <Text style={styles.selectedInfoText}>Dil: <Text style={styles.selectedInfoValue}>{currentSettings.langLabel}</Text></Text>
+          <Text style={styles.selectedInfoText}>Kategori: <Text style={[styles.selectedInfoValue, { color: '#F59E42' }]}>{currentSettings.catLabel}</Text></Text>
+          <Text style={styles.selectedInfoText}>Seviye: <Text style={styles.selectedInfoValue}>{currentSettings.levelLabel}</Text></Text>
+        </View>
+
+        <View style={[styles.outerRow, { marginTop: isWeb ? 12 : 32 }, (allWordsFound || timeUp) && { pointerEvents: 'none', opacity: 0.5 }]}>
+          <View style={[styles.floatingWordsCol, styles.leftWordsColWeb]}>
+            {leftWords.map((word, idx) => (
+              <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {height: CELL_SIZE}]}>
+                <Text style={[
+                  styles.floatingWordText,
+                  word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7, background: 'linear-gradient(90deg,#FBBF24,#7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', transition: 'all 0.3s'}
+                ]}>{word.text}</Text>
+              </View>
+            ))}
           </View>
-        ) : (
-          // Mobilde tüm kutuların üstten boşluğunu eşit olarak artır
-          <View style={{
-            width: '100%',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 16,
-            marginTop: 32,
-            marginBottom: 10,
-          }}>
-            <TouchableOpacity style={styles.mobileBackButton} onPress={() => router.back()}>
-              <MaterialIcons name="arrow-back" size={28} color={theme.header} />
+          <Animatable.View 
+            animation="fadeInUp" 
+            duration={700} 
+            style={[styles.grid, {backdropFilter: 'blur(18px)', shadowColor: '#a78bfa', shadowOpacity: 0.18, shadowRadius: 32, elevation: 12}]}
+          >
+            {grid.map((row, rowIndex) => (
+              <View key={rowIndex} style={styles.gridRow}>
+                {row.map((cell, colIndex) => (
+                  <TouchableOpacity
+                    key={`${rowIndex}-${colIndex}`}
+                    style={[
+                      styles.cell,
+                      selectedCells.some(([r, c]) => r === rowIndex && c === colIndex) && styles.selectedCell,
+                      foundWords.some(word =>
+                        word.positions.some(([r, c]) => r === rowIndex && c === colIndex)
+                      ) && styles.foundCell,
+                      {transitionProperty: isWeb ? 'background,border,box-shadow' : undefined, transitionDuration: isWeb ? '0.3s' : undefined},
+                    ]}
+                    onPress={() => handleCellPress(rowIndex, colIndex)}
+                    disabled={allWordsFound || timeUp}
+                    activeOpacity={0.7}
+                  >
+                    <Animatable.View animation={selectedCells.some(([r, c]) => r === rowIndex && c === colIndex) ? 'pulse' : undefined} duration={300} style={styles.cellInner}>
+                      <Text style={styles.cellText}>{cell}</Text>
+                    </Animatable.View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ))}
+          </Animatable.View>
+          <View style={[styles.floatingWordsCol, styles.rightWordsColWeb]}>
+            {rightWords.map((word, idx) => (
+              <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {height: CELL_SIZE}]}>
+                <Text style={[
+                  styles.floatingWordText,
+                  word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7, background: 'linear-gradient(90deg,#FBBF24,#7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', transition: 'all 0.3s'}
+                ]}>{word.text}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+        {(allWordsFound || timeUp) && (
+          <View style={{position:'absolute',top:0,left:0,right:0,height: CELL_SIZE * GRID_SIZE + GRID_MARGIN * 2, zIndex:20, alignSelf:'center'}} pointerEvents="auto" />
+        )}
+        <View style={styles.bottomWordsRow} pointerEvents={allWordsFound || timeUp ? 'none' : 'auto'}>
+          {words.map((word, idx) => (
+            <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {position: 'relative'}]}>
+              <Text style={[
+                styles.floatingWordText,
+                word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7, background: 'linear-gradient(90deg,#FBBF24,#7C3AED)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', transition: 'all 0.3s'}
+              ]}>{word.text}</Text>
+            </View>
+          ))}
+        </View>
+        {(allWordsFound || timeUp) && (
+          <View style={{position:'absolute',top: styles.outerRow.marginTop + (isWeb ? 0 : 32) + (CELL_SIZE * GRID_SIZE + GRID_MARGIN * 2), left:0, right:0, height: 60, zIndex:20, alignSelf:'center'}} pointerEvents="auto" />
+        )}
+        <View style={{ width: '100%', alignItems: 'center', marginTop: 32, marginBottom: 16 }}>
+          <TouchableOpacity style={styles.restartButton} onPress={restartGame}>
+            <MaterialIcons name="refresh" size={24} color="#fff" />
+            <Text style={styles.restartButtonText}>Yeniden Başla</Text>
+          </TouchableOpacity>
+        </View>
+        {showCongratsModal && (
+          <Modal
+            visible={showCongratsModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowCongratsModal(false)}
+          >
+            <TouchableOpacity style={{flex:1}} activeOpacity={1} onPress={() => setShowCongratsModal(false)}>
+              <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+                <Animated.View style={{ transform: [{ scale: modalScaleAnim }], backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 20, padding: 32, alignItems: 'center', maxWidth: 360, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }}>
+                  <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FBBF24', marginBottom: 12 }}>Tebrikler! 🎉</Text>
+                  <Text style={{ fontSize: 20, color: isDark ? '#fff' : '#232136', marginBottom: 18, textAlign: 'center' }}>Tüm kelimeleri buldun!</Text>
+                  <Text style={{ fontSize: 18, color: isDark ? '#fff' : '#232136', marginBottom: 8 }}>Kazanılan Puan: <Text style={{ color: '#7C3AED', fontWeight: 'bold' }}>{congratsPoints.points}</Text></Text>
+                  {congratsDuration !== null && (
+                    <Text style={{ fontSize: 16, color: isDark ? '#fff' : '#232136', marginBottom: 8 }}>Geçen Süre: <Text style={{ color: '#7C3AED', fontWeight: 'bold' }}>{congratsDuration} sn</Text></Text>
+                  )}
+                  <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                    <TouchableOpacity onPress={restartGame} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginRight: 8 }}>
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Tekrar Oyna</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setShowCongratsModal(false); router.back(); }} style={{ backgroundColor: '#FBBF24', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}>
+                      <Text style={{ color: isDark ? '#232136' : '#232136', fontWeight: 'bold', fontSize: 18 }}>Ana Menü</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+                {showConfettiAnim && <ConfettiCannon count={120} origin={{x:180,y:0}} fadeOut autoStart explosionSpeed={350} fallSpeed={2500} />}
+              </BlurView>
             </TouchableOpacity>
-            
-            {/* Timer kutusu */}
-            <View style={[styles.timerBox, {marginLeft: 0}]}> 
-              <Text style={[styles.timerText, timeLeft <= 10 && styles.timerTextDanger]}>{formatTime(timeLeft)}</Text>
-            </View>
-            
-            {/* Puan kutusu */}
-            <View style={{
-              backgroundColor: isDark ? '#232136' : '#fff',
-              borderRadius: 16,
-              paddingTop: 0,
-              paddingBottom: 8,
-              paddingHorizontal: 22,
-              flexDirection: 'row',
-              alignItems: 'center',
-              boxShadow: '0 2px 12px 0 rgba(124,58,237,0.08)',
-              borderWidth: 2,
-              borderColor: isDark ? '#10B981' : '#FBBF24',
-              marginLeft: 100,
-            }}>
-              <MaterialIcons name="star" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
-              <Text style={{fontWeight:'bold',fontSize:22,color: isDark ? '#10B981' : '#FBBF24',letterSpacing:1}}>{earnedPoints}</Text>
-            </View>
-          </View>
+          </Modal>
+        )}
+        {showTimeUpModal && (
+          <Modal
+            visible={showTimeUpModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTimeUpModal(false)}
+          >
+            <TouchableOpacity style={{flex:1}} activeOpacity={1} onPress={() => setShowTimeUpModal(false)}>
+              <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+                <Animated.View style={{ transform: [{ scale: modalScaleAnim }], backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 20, padding: 32, alignItems: 'center', maxWidth: 360, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }}>
+                  <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#F87171', marginBottom: 12 }}>Süre Doldu!</Text>
+                  <Text style={{ fontSize: 20, color: isDark ? '#fff' : '#232136', marginBottom: 18, textAlign: 'center' }}>Süren doldu. Tekrar deneyebilirsin!</Text>
+                  <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                    <TouchableOpacity onPress={() => {
+                      setShowTimeUpModal(false);
+                      setScore(0);
+                      setFoundWords([]);
+                      setSelectedCells([]);
+                      setTimeUp(false);
+                      setGameStarted(true);
+                      startGame();
+                    }} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginRight: 8 }}>
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Tekrar Oyna</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => { setShowTimeUpModal(false); router.back(); }} style={{ backgroundColor: '#FBBF24', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}>
+                      <Text style={{ color: isDark ? '#232136' : '#232136', fontWeight: 'bold', fontSize: 18 }}>Ana Menü</Text>
+                    </TouchableOpacity>
+                  </View>
+                </Animated.View>
+              </BlurView>
+            </TouchableOpacity>
+          </Modal>
         )}
       </View>
-
-      <View style={styles.selectedInfoBox}>
-        <Text style={styles.selectedInfoText}>Dil: <Text style={styles.selectedInfoValue}>{currentSettings.langLabel}</Text></Text>
-        <Text style={styles.selectedInfoText}>Kategori: <Text style={[styles.selectedInfoValue, { color: '#F59E42' }]}>{currentSettings.catLabel}</Text></Text>
-        <Text style={styles.selectedInfoText}>Seviye: <Text style={styles.selectedInfoValue}>{currentSettings.levelLabel}</Text></Text>
-      </View>
-
-      <View style={[styles.outerRow, { marginTop: isWeb ? 12 : 32 }, (allWordsFound || timeUp) && { pointerEvents: 'none', opacity: 0.5 }]}>
-        <View style={[styles.floatingWordsCol, styles.leftWordsColWeb]}>
-          {leftWords.map((word, idx) => (
-            <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {height: CELL_SIZE}]}>
-              <Text style={[styles.floatingWordText, word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7}]}>{word.text}</Text>
-            </View>
-          ))}
-        </View>
-        <Animatable.View 
-          animation="fadeIn" 
-          duration={500} 
-          style={styles.grid}
-        >
-          {grid.map((row, rowIndex) => (
-            <View key={rowIndex} style={styles.gridRow}>
-              {row.map((cell, colIndex) => (
-                <TouchableOpacity
-                  key={`${rowIndex}-${colIndex}`}
-                  style={[
-                    styles.cell,
-                    selectedCells.some(([r, c]) => r === rowIndex && c === colIndex) && styles.selectedCell,
-                    foundWords.some(word =>
-                      word.positions.some(([r, c]) => r === rowIndex && c === colIndex)
-                    ) && styles.foundCell,
-                  ]}
-                  onPress={() => handleCellPress(rowIndex, colIndex)}
-                  disabled={allWordsFound || timeUp}
-                >
-                  <View style={styles.cellInner}>
-                    <Text style={styles.cellText}>{cell}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))}
-        </Animatable.View>
-        <View style={[styles.floatingWordsCol, styles.rightWordsColWeb]}>
-          {rightWords.map((word, idx) => (
-            <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {height: CELL_SIZE}]}>
-              <Text style={[styles.floatingWordText, word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7}]}>{word.text}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-      {(allWordsFound || timeUp) && (
-        <View style={{position:'absolute',top:0,left:0,right:0,height: CELL_SIZE * GRID_SIZE + GRID_MARGIN * 2, zIndex:20, alignSelf:'center'}} pointerEvents="auto" />
-      )}
-      <View style={styles.bottomWordsRow} pointerEvents={allWordsFound || timeUp ? 'none' : 'auto'}>
-        {words.map((word, idx) => (
-          <View key={idx} style={[styles.floatingWord, word.found && styles.foundFloatingWord, {position: 'relative'}]}>
-            <Text style={[styles.floatingWordText, word.found && {color: '#fff', textDecorationLine: 'line-through', opacity: 0.7}]}>{word.text}</Text>
-          </View>
-        ))}
-      </View>
-      {(allWordsFound || timeUp) && (
-        <View style={{position:'absolute',top: styles.outerRow.marginTop + (isWeb ? 0 : 32) + (CELL_SIZE * GRID_SIZE + GRID_MARGIN * 2), left:0, right:0, height: 60, zIndex:20, alignSelf:'center'}} pointerEvents="auto" />
-      )}
-      <View style={{ width: '100%', alignItems: 'center', marginTop: 32, marginBottom: 16 }}>
-        <TouchableOpacity style={styles.restartButton} onPress={restartGame}>
-          <MaterialIcons name="refresh" size={24} color="#fff" />
-          <Text style={styles.restartButtonText}>Yeniden Başla</Text>
-        </TouchableOpacity>
-      </View>
-      {showCongratsModal && (
-        <Modal
-          visible={showCongratsModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowCongratsModal(false)}
-        >
-          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
-            <View style={{
-              backgroundColor: isDark ? '#232136' : '#fff',
-              borderRadius:20,
-              padding:32,
-              alignItems:'center',
-              maxWidth:360,
-              shadowColor:'#000',
-              shadowOpacity:0.15,
-              shadowRadius:16,
-              elevation:8
-            }}>
-              <Text style={{fontSize:24,fontWeight:'bold',color:'#FBBF24',marginBottom:12}}>Tebrikler! 🎉</Text>
-              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Tüm kelimeleri buldun!</Text>
-              <Text style={{fontSize:16,color: isDark ? '#fff' : '#232136',marginBottom:8}}>Kazanılan Puanlar:</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Kelimeler: {foundWords.length * 12}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Süre Bonusu: {timeLeft > 60 ? 50 : timeLeft > 30 ? 30 : 20}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Tüm Kelimeler Bonusu: 40</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:10}}>• Streak Bonusu: {congratsPoints.details.streakBonus}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#a78bfa' : '#7C3AED',marginBottom:10}}>Süre: {congratsDuration !== null ? congratsDuration.toFixed(1) : '-'} sn</Text>
-              <Text style={{fontSize:17,fontWeight:'bold',color: isDark ? '#a78bfa' : '#7C3AED',marginBottom:18}}>Toplam: {congratsPoints.points} puan</Text>
-              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
-                <TouchableOpacity onPress={() => { setShowCongratsModal(false); restartGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
-                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setShowCongratsModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
-                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-      {/* Süre doldu modalı */}
-      {showTimeUpModal && (
-        <Modal
-          visible={showTimeUpModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowTimeUpModal(false)}
-        >
-          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
-            <View style={{
-              backgroundColor: isDark ? '#232136' : '#fff',
-              borderRadius:20,
-              padding:32,
-              alignItems:'center',
-              maxWidth:360,
-              shadowColor:'#000',
-              shadowOpacity:0.15,
-              shadowRadius:16,
-              elevation:8
-            }}>
-              <Text style={{fontSize:24,fontWeight:'bold',color:'#F87171',marginBottom:12}}>Süre Doldu!</Text>
-              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Maalesef, süren doldu. Tekrar deneyebilirsin!</Text>
-              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
-                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); restartGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
-                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
-                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-    </View>
+    </LinearGradient>
   );
 } 

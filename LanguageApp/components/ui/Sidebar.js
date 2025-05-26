@@ -5,6 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { useUser } from '../../context/UserContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ACCENT = '#7C3AED';
 
@@ -12,7 +13,7 @@ const menuItems = [
   { label: 'Ana Sayfa', route: '/home', icon: 'home' },
   { label: 'Oyunlar', route: '/games', icon: 'sports-esports', isNew: true },
   { label: 'Akıllı Metinler', route: '/smart-texts', icon: 'psychology' },
-  { label: 'Metinler', route: '/stories', icon: 'menu-book' },
+  { label: 'Metinler', route: '/stories', icon: 'menu-book', locked: true  },
   { label: 'İstatistikler', route: '/stats', icon: 'bar-chart', locked: true },
   { label: 'Ayarlar', route: '/settings', icon: 'settings' },
 ];
@@ -49,11 +50,16 @@ export default function Sidebar() {
   const fabTop = PROFILE_AREA_HEIGHT + settingsIdx * MENU_ITEM_HEIGHT;
 
   return (
-    <View style={[styles.sidebar, isDark && styles.sidebarDark]}>
+    <LinearGradient
+      colors={isDark ? ['#181825', '#232136', '#4f378b'] : ['#f8fafc', '#e0e7ff', '#a78bfa']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={[styles.sidebar, isDark && styles.sidebarDark, { position: 'relative' }]}
+    >
       <View style={styles.profileArea}>
         <View style={styles.avatarCircle}>
           {user?.photoURL ? (
-            <img src={user.photoURL} alt="avatar" style={{ width: 54, height: 54, borderRadius: 27 }} />
+            <img src={user.photoURL} alt="avatar" style={{ width: 64, height: 64, borderRadius: 32, boxShadow: '0 2px 12px #a78bfa33' }} />
           ) : (
             <Text style={styles.avatarText}>{user?.name ? user.name[0].toUpperCase() : 'K'}</Text>
           )}
@@ -87,10 +93,19 @@ export default function Sidebar() {
               onMouseLeave: () => setHovered(null),
             })}
           >
-            <MaterialIcons name={item.icon} size={24} color={active ? '#fff' : (item.locked ? ACCENT : ACCENT)} style={{ marginRight: 12 }} />
-            <Text style={[styles.menuText, active && styles.activeText, !active && isHover && styles.hoverText, item.locked && styles.lockedText]}>{item.label}</Text>
+            {/* Aktif menüde sol renkli bar */}
+            {active && <View style={styles.activeBar} />}
+            <MaterialIcons name={item.icon} size={28} color={active ? '#fff' : (item.locked ? ACCENT : ACCENT)} style={{ marginRight: 16, marginLeft: 2 }} />
+            <Text style={[
+              styles.menuText,
+              active && styles.activeText,
+              !active && isHover && styles.hoverText,
+              item.locked && styles.lockedText,
+              isDark && !active && !isHover && !item.locked && { color: '#e0e7ff' },
+              isDark && item.locked && { color: '#bdbdf6' },
+            ]}>{item.label}</Text>
             {item.isNew && <View style={styles.newBadge}><Text style={styles.newBadgeText}>Yeni</Text></View>}
-            {item.locked && <MaterialIcons name="lock" size={16} color={ACCENT} style={{ marginLeft: 8 }} />}
+            {item.locked && <MaterialIcons name="lock" size={18} color={ACCENT} style={{ marginLeft: 8 }} />}
           </TouchableOpacity>
         );
       })}
@@ -198,8 +213,8 @@ export default function Sidebar() {
               />
               <View style={{
                 position: 'absolute',
-                left: 220,
-                top: fabTop,
+                left: 270,
+                top: fabTop + 260,
                 backgroundColor: isDark ? '#232136' : '#fff',
                 borderRadius: 18,
                 padding: 22,
@@ -266,96 +281,114 @@ export default function Sidebar() {
           )}
         </>
       )}
-      {/* Çıkış Yap butonu ve puan göstergesi ... */}
-    </View>
+      {/* Çıkış butonu */}
+      <TouchableOpacity style={styles.logoutBtn} onPress={async () => { await logout(); router.replace('/login'); }}>
+        <MaterialIcons name="logout" size={22} color="#ef4444" style={{ marginRight: 10 }} />
+        <Text style={styles.logoutText}>Çıkış Yap</Text>
+      </TouchableOpacity>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 220,
+    width: 250,
     backgroundColor: '#fff',
-    paddingVertical: 32,
-    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'web' ? 40 : 20,
+    paddingHorizontal: 22,
     minHeight: '100%',
-    borderRightWidth: 1,
-    borderRightColor: '#ececec',
+    borderRightWidth: 0,
+    borderRightColor: 'transparent',
     shadowColor: '#7C3AED',
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
+    shadowOpacity: 0.10,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+    position: 'relative',
   },
   sidebarDark: {
-    backgroundColor: '#232136',
-    borderRightColor: '#232136',
+    backgroundColor: 'transparent',
+    borderRightColor: 'transparent',
   },
   profileArea: {
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 28,
   },
   avatarCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: '#7C3AED',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     shadowColor: '#7C3AED',
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   avatarText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 26,
+    fontSize: 32,
   },
   profileName: {
     color: '#7C3AED',
     fontWeight: 'bold',
-    fontSize: 18,
+    fontSize: 20,
     marginBottom: 2,
+    letterSpacing: 0.5,
   },
   divider: {
-    height: 1,
+    height: 2,
     backgroundColor: '#e9d5ff',
-    marginVertical: 10,
+    marginVertical: 14,
     width: '100%',
+    borderRadius: 2,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingLeft: 10,
-    borderRadius: 14,
-    marginBottom: 12,
+    paddingVertical: 18,
+    paddingLeft: 16,
+    borderRadius: 16,
+    marginBottom: 7,
     position: 'relative',
     backgroundColor: 'transparent',
     transition: 'background-color 0.18s',
+    minHeight: 54,
   },
   activeMenu: {
     backgroundColor: '#7C3AED',
     shadowColor: '#7C3AED',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.14,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 3 },
   },
   hoverMenu: {
     backgroundColor: '#a78bfa',
   },
+  activeBar: {
+    position: 'absolute',
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 5,
+    borderRadius: 3,
+    backgroundColor: '#fbbf24',
+    zIndex: 2,
+  },
   menuText: {
-    fontSize: 17,
+    fontSize: 19,
     color: ACCENT,
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 6,
     transition: 'color 0.18s',
   },
   activeText: {
     fontWeight: 'bold',
     color: '#fff',
-    fontSize: 18,
+    fontSize: 20,
   },
   hoverText: {
     color: '#fff',
@@ -363,38 +396,43 @@ const styles = StyleSheet.create({
   },
   newBadge: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 10,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginLeft: 12,
     shadowColor: '#7C3AED',
-    shadowOpacity: 0.10,
-    shadowRadius: 4,
+    shadowOpacity: 0.13,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
   },
   newBadgeText: {
     color: '#7C3AED',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 14,
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
-    paddingVertical: 12,
-    paddingLeft: 10,
-    borderRadius: 14,
+    marginTop: 28,
+    paddingVertical: 14,
+    paddingLeft: 16,
+    borderRadius: 16,
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fecaca',
+    shadowColor: '#ef4444',
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   logoutText: {
     color: '#ef4444',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: 0.3,
   },
   lockedMenuItem: {
-    opacity: 0.7,
+    opacity: 1,
   },
   lockedText: {
     color: ACCENT,

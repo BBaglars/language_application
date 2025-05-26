@@ -8,6 +8,9 @@ import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useUser } from '../../../context/UserContext';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 const FLIP_DURATION = 350;
 
@@ -157,6 +160,11 @@ export default function MatchingGame() {
   };
 
   const startGame = async () => {
+    // Timer'ı seviyeye göre her zaman sıfırla
+    const levelMultipliers = { A1: 1, A2: 1, B1: 1.2, B2: 1.2, C1: 1.4, C2: 1.4 };
+    const multiplier = levelMultipliers[settings.level] || 1;
+    const initialTime = Math.round(90 * multiplier);
+    setTimeLeft(initialTime);
     if (!selectedPairId) {
       Alert.alert('Uyarı', 'Lütfen bir dil çifti seçin!');
       return;
@@ -744,292 +752,242 @@ export default function MatchingGame() {
   }
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity style={styles.backIconBtn} onPress={() => router.back()}>
-        <MaterialIcons name="arrow-back" size={28} color="#7C3AED" />
-      </TouchableOpacity>
-      <View style={styles.bgCircle1} />
-      <View style={styles.bgCircle2} />
-      <View style={styles.bgCircle3} />
-      {/* HEADER ROW: Timer ve Puan kutusu */}
-      {gameStarted && (
-        <View style={{
-          width: '100%',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 16,
-          marginTop: isMobile ? 32 : 32,
-          marginBottom: 10,
-        }}>
-          {/* Timer kutusu */}
-          <View style={{
-            position: 'relative',
-            backgroundColor: isDark ? '#232136' : '#fff',
-            borderRadius: 16,
-            paddingVertical: 4,
-            paddingHorizontal: 18,
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 2,
-            borderColor: '#7C3AED',
-            shadowColor: '#7C3AED',
-            shadowOpacity: 0.08,
-            shadowRadius: 8,
-            elevation: 2,
-            marginLeft: isMobile ? 0 : 700,
-          }}>
-            <MaterialIcons name="timer" size={22} color="#7C3AED" style={{marginRight: 6}} />
-            <Text style={{fontWeight:'bold',fontSize:18,color:'#7C3AED',letterSpacing:1}}>{formatTime(timeLeft)}</Text>
+    <LinearGradient
+      colors={isDark ? ['#181825', '#232136', '#fbbf2422'] : ['#f8fafc', '#e0e7ff', '#a78bfa11']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.backIconBtn} onPress={() => router.back()}>
+          <MaterialIcons name="arrow-back" size={28} color="#7C3AED" />
+        </TouchableOpacity>
+        <View style={styles.scoreRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 16, paddingVertical: 4, paddingHorizontal: 18, borderWidth: 2, borderColor: '#7C3AED', shadowColor: '#7C3AED', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2, marginRight: 16 }}>
+            <MaterialIcons name="timer" size={22} color="#7C3AED" style={{ marginRight: 6 }} />
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#7C3AED', letterSpacing: 1 }}>{formatTime(timeLeft)}</Text>
           </View>
-          {/* Puan kutusu */}
-          <View style={{
-            backgroundColor: isDark ? '#232136' : '#fff',
-            borderRadius: 16,
-            paddingTop: 0,
-            paddingBottom: 8,
-            paddingHorizontal: 22,
-            flexDirection: 'row',
-            alignItems: 'center',
-            boxShadow: '0 2px 12px 0 rgba(124,58,237,0.08)',
-            borderWidth: 2,
-            borderColor: isDark ? '#10B981' : '#FBBF24',
-            marginLeft: isMobile ? 100 : 200,
-          }}>
-            <MaterialIcons name="star" size={26} color={isDark ? '#10B981' : '#FBBF24'} style={{marginRight: 6}} />
-            <Text style={{fontWeight:'bold',fontSize:22,color: isDark ? '#10B981' : '#FBBF24',letterSpacing:1}}>{earnedPoints}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 16, paddingVertical: 4, paddingHorizontal: 18, borderWidth: 2, borderColor: isDark ? '#10B981' : '#FBBF24', shadowColor: '#7C3AED', shadowOpacity: 0.08, shadowRadius: 8, elevation: 2 }}>
+            <FontAwesome5 name="trophy" size={22} color={isDark ? '#10B981' : '#FBBF24'} style={{ marginRight: 6 }} />
+            <Text style={{ fontWeight: 'bold', fontSize: 18, color: isDark ? '#10B981' : '#FBBF24', letterSpacing: 1 }}>{score}</Text>
           </View>
         </View>
-      )}
-      <View style={styles.selectedInfoBox}>
-        <Text style={styles.selectedInfoText}>
-          Dil Çifti: <Text style={styles.selectedInfoValue}>
-            {selectedPairId
-              ? (isMobile
-                  ? `${languagePairs.find(p => p.id?.toString() === selectedPairId)?.sourceLanguage?.name} -> ${languagePairs.find(p => p.id?.toString() === selectedPairId)?.targetLanguage?.name}`
-                  : `${languagePairs.find(p => p.id?.toString() === selectedPairId)?.sourceLanguage?.name} → ${languagePairs.find(p => p.id?.toString() === selectedPairId)?.targetLanguage?.name}`)
-              : '-'}
-        </Text>
-        </Text>
-        <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 16 }}>
+        <View style={styles.selectedInfoBox}>
           <Text style={styles.selectedInfoText}>
-            Kategori: <Text style={[styles.selectedInfoValue, { color: '#F59E42' }]}>{settings.catLabel || settings.cat}</Text>
+            Dil Çifti: <Text style={styles.selectedInfoValue}>
+              {selectedPairId
+                ? (isMobile
+                    ? `${languagePairs.find(p => p.id?.toString() === selectedPairId)?.sourceLanguage?.name} -> ${languagePairs.find(p => p.id?.toString() === selectedPairId)?.targetLanguage?.name}`
+                    : `${languagePairs.find(p => p.id?.toString() === selectedPairId)?.sourceLanguage?.name} → ${languagePairs.find(p => p.id?.toString() === selectedPairId)?.targetLanguage?.name}`)
+                : '-'}
           </Text>
-          <Text style={styles.selectedInfoText}>
-            Seviye: <Text style={styles.selectedInfoValue}>{settings.levelLabel || settings.level}</Text>
           </Text>
+          <View style={{ flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? 2 : 16 }}>
+            <Text style={styles.selectedInfoText}>
+              Kategori: <Text style={[styles.selectedInfoValue, { color: '#F59E42' }]}>{settings.catLabel || settings.cat}</Text>
+            </Text>
+            <Text style={styles.selectedInfoText}>
+              Seviye: <Text style={styles.selectedInfoValue}>{settings.levelLabel || settings.level}</Text>
+            </Text>
+          </View>
         </View>
-      </View>
-      {!gameStarted ? (
-        <>
-          <Text style={styles.label}>Dil Çifti Seçin:</Text>
-          <SelectComponent
-            value={selectedPairId}
-            setValue={setSelectedPairId}
-            items={[
-              { label: 'Dil çifti seçin', value: '' },
-              ...languagePairs.map(pair => ({
-                label: isMobile
-                  ? `${pair.sourceLanguage?.name} -> ${pair.targetLanguage?.name}`
-                  : `${pair.sourceLanguage?.name} → ${pair.targetLanguage?.name}`,
-                value: pair.id.toString()
-              }))
-            ]}
-            placeholder="Dil çifti seçin"
-            open={dropdownOpen}
-            setOpen={setDropdownOpen}
-            onOpen={undefined}
-            zIndex={1000}
-            textColor={theme.header}
-            borderColor={theme.header}
-            dropdownBg={theme.pickerBg}
-            placeholderColor={isDark ? '#aaa' : '#aaa'}
-            dropdownOverlayBg={dropdownOverlayBg}
-          />
-          <TouchableOpacity style={styles.startButton} onPress={startGame}>
-            <Text style={styles.startButtonText}>Oyunu Başlat</Text>
-          </TouchableOpacity>
-        </>
-      ) : (
-        <>
-          <View style={styles.grid}>
-            {rows.map((row, rowIdx) => (
-              <View key={rowIdx} style={{ flexDirection: 'row', width: '100%', justifyContent: 'center' }}>
-                {row.map((card, idx) => {
-                  if (card.empty) {
-                    return <View key={card.id} style={[styles.cardContainer, { backgroundColor: 'transparent' }]} />;
-                  }
-                  const cardIndex = rowIdx * 4 + idx;
-                  const isOpen = !!selectedCards.find(c => c.id === card.id) || matchedPairs.includes(card.pairId);
-                  const flipValue = flipAnimations[cardIndex];
-                  const scale = scaleAnimations[cardIndex];
-                  const isFullyFlipped = isFlippedArr[cardIndex] && flipAnimArr[cardIndex] === 1;
+        {!gameStarted ? (
+          <>
+            <Text style={styles.label}>Dil Çifti Seçin:</Text>
+            <SelectComponent
+              value={selectedPairId}
+              setValue={setSelectedPairId}
+              items={[
+                { label: 'Dil çifti seçin', value: '' },
+                ...languagePairs.map(pair => ({
+                  label: isMobile
+                    ? `${pair.sourceLanguage?.name} -> ${pair.targetLanguage?.name}`
+                    : `${pair.sourceLanguage?.name} → ${pair.targetLanguage?.name}`,
+                  value: pair.id.toString()
+                }))
+              ]}
+              placeholder="Dil çifti seçin"
+              open={dropdownOpen}
+              setOpen={setDropdownOpen}
+              onOpen={undefined}
+              zIndex={1000}
+              textColor={theme.header}
+              borderColor={theme.header}
+              dropdownBg={theme.pickerBg}
+              placeholderColor={isDark ? '#aaa' : '#aaa'}
+              dropdownOverlayBg={dropdownOverlayBg}
+            />
+            <TouchableOpacity style={styles.startButton} onPress={startGame}>
+              <Text style={styles.startButtonText}>Oyunu Başlat</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={styles.grid}>
+              {rows.map((row, rowIdx) => (
+                <View key={rowIdx} style={{ flexDirection: 'row', width: '100%', justifyContent: 'center' }}>
+                  {row.map((card, idx) => {
+                    if (card.empty) {
+                      return <View key={card.id} style={[styles.cardContainer, { backgroundColor: 'transparent' }]} />;
+                    }
+                    const cardIndex = rowIdx * 4 + idx;
+                    const isOpen = !!selectedCards.find(c => c.id === card.id) || matchedPairs.includes(card.pairId);
+                    const flipValue = flipAnimations[cardIndex];
+                    const scale = scaleAnimations[cardIndex];
+                    const isFullyFlipped = isFlippedArr[cardIndex] && flipAnimArr[cardIndex] === 1;
 
-                  return (
-                    <View key={card.id} style={styles.cardContainer}>
-                      {/* Arka yüz (soru işareti) */}
-                      <Animated.View
-                        style={[
-                          StyleSheet.absoluteFill,
-                          {
-                            backfaceVisibility: 'hidden',
-                            backgroundColor: Platform.OS === 'web' ? 'transparent' : '#7C3AED',
-                            borderRadius: 16,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            transform: [
-                              {
-                                rotateY: flipValue.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: ['0deg', '180deg']
-                                })
-                              }
-                            ]
-                          }
-                        ]}
-                      >
-                        {Platform.OS === 'web' && (
-                          <View
-                            style={[
-                              StyleSheet.absoluteFill,
-                              {
-                                borderRadius: 16,
-                                background: 'linear-gradient(135deg, #a78bfa 0%, #7C3AED 100%)',
-                              }
-                            ]}
-                          />
-                        )}
-                        <Text style={[styles.cardTextBack, { color: '#fff' }]}>?</Text>
-                      </Animated.View>
-                      {/* Ön yüz (kelime) */}
-                      <Animated.View
-                        style={[
-                          StyleSheet.absoluteFill,
-                          {
-                            backfaceVisibility: 'hidden',
-                            backgroundColor: matchedPairs.includes(card.pairId) ? '#FBBF24' : theme.cardOpenBg,
-                            borderRadius: 16,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            transform: [
-                              {
-                                rotateY: flipValue.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: ['180deg', '360deg']
-                                })
-                              }
-                            ]
-                          }
-                        ]}
-                      >
-                        <Text
+                    return (
+                      <View key={card.id} style={styles.cardContainer}>
+                        {/* Arka yüz (soru işareti) */}
+                        <Animated.View
                           style={[
-                            styles.cardText,
+                            StyleSheet.absoluteFill,
                             {
-                              color: matchedPairs.includes(card.pairId) ? '#fff' : theme.cardOpenText
+                              backfaceVisibility: 'hidden',
+                              backgroundColor: Platform.OS === 'web' ? 'transparent' : '#7C3AED',
+                              borderRadius: 16,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              transform: [
+                                {
+                                  rotateY: flipValue.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['0deg', '180deg']
+                                  })
+                                }
+                              ]
                             }
                           ]}
-                          numberOfLines={2}
-                          ellipsizeMode="tail"
-                          adjustsFontSizeToFit={true}
-                          minimumFontScale={0.6}
                         >
-                          {card.text?.toUpperCase()}
-                        </Text>
-                      </Animated.View>
-                      <TouchableOpacity
-                        style={StyleSheet.absoluteFill}
-                        onPress={() => handleCardSelect(card, cardIndex)}
-                        disabled={isOpen}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity 
-            style={[styles.newGameButton, { alignSelf: 'center', marginTop: 0, marginBottom: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }]} 
-            onPress={startGame}
+                          {Platform.OS === 'web' && (
+                            <View
+                              style={[
+                                StyleSheet.absoluteFill,
+                                {
+                                  borderRadius: 16,
+                                  background: 'linear-gradient(135deg, #a78bfa 0%, #7C3AED 100%)',
+                                }
+                              ]}
+                            />
+                          )}
+                          <Text style={[styles.cardTextBack, { color: '#fff' }]}>?</Text>
+                        </Animated.View>
+                        {/* Ön yüz (kelime) */}
+                        <Animated.View
+                          style={[
+                            StyleSheet.absoluteFill,
+                            {
+                              backfaceVisibility: 'hidden',
+                              backgroundColor: matchedPairs.includes(card.pairId) ? '#FBBF24' : theme.cardOpenBg,
+                              borderRadius: 16,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                              transform: [
+                                {
+                                  rotateY: flipValue.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: ['180deg', '360deg']
+                                  })
+                                }
+                              ]
+                            }
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.cardText,
+                              {
+                                color: matchedPairs.includes(card.pairId) ? '#fff' : theme.cardOpenText
+                              }
+                            ]}
+                            numberOfLines={2}
+                            ellipsizeMode="tail"
+                            adjustsFontSizeToFit={true}
+                            minimumFontScale={0.6}
+                          >
+                            {card.text?.toUpperCase()}
+                          </Text>
+                        </Animated.View>
+                        <TouchableOpacity
+                          style={StyleSheet.absoluteFill}
+                          onPress={() => handleCardSelect(card, cardIndex)}
+                          disabled={isOpen}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity 
+              style={[styles.newGameButton, { alignSelf: 'center', marginTop: 0, marginBottom: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }]} 
+              onPress={startGame}
+            >
+              <MaterialIcons name="refresh" size={20} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.newGameButtonText}>Yeniden Başlat</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        {showCongratsModal && (
+          <Modal
+            visible={showCongratsModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowCongratsModal(false)}
           >
-            <MaterialIcons name="refresh" size={20} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={styles.newGameButtonText}>Yeniden Başlat</Text>
-          </TouchableOpacity>
-        </>
-      )}
-      {showCongratsModal && (
-        <Modal
-          visible={showCongratsModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowCongratsModal(false)}
-        >
-          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
-            <View style={{
-              backgroundColor: isDark ? '#232136' : '#fff',
-              borderRadius:20,
-              padding:32,
-              alignItems:'center',
-              maxWidth:360,
-              shadowColor:'#000',
-              shadowOpacity:0.15,
-              shadowRadius:16,
-              elevation:8
-            }}>
-              <Text style={{fontSize:24,fontWeight:'bold',color:'#FBBF24',marginBottom:12}}>Tebrikler! 🎉</Text>
-              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Tüm eşleşmeleri buldun!</Text>
-              <Text style={{fontSize:16,color: isDark ? '#fff' : '#232136',marginBottom:8}}>Kazanılan Puanlar:</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Eşleşmeler: {congratsPoints.details?.pairs || 0}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Süre Bonusu: {congratsPoints.details?.timeBonus || 0}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:2}}>• Hatasız Bitirme: {congratsPoints.details?.noMistake || 0}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#fff' : '#232136',marginBottom:10}}>• Streak Bonusu: {congratsPoints.details?.streakBonus || 0}</Text>
-              <Text style={{fontSize:15,color: isDark ? '#a78bfa' : '#7C3AED',marginBottom:10}}>Süre: {congratsPoints.duration ? congratsPoints.duration.toFixed(1) : '-'} sn</Text>
-              <Text style={{fontSize:17,fontWeight:'bold',color: isDark ? '#a78bfa' : '#7C3AED',marginBottom:18}}>Toplam: {congratsPoints.points} puan</Text>
-              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
-                <TouchableOpacity onPress={() => { setShowCongratsModal(false); startGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
-                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setShowCongratsModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
-                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
-                </TouchableOpacity>
+            <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+              <View style={{ backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 20, padding: 32, alignItems: 'center', maxWidth: 360, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }}>
+                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#FBBF24', marginBottom: 12 }}>Tebrikler! 🎉</Text>
+                <Text style={{ fontSize: 20, color: isDark ? '#fff' : '#232136', marginBottom: 18, textAlign: 'center' }}>Tüm eşleşmeleri buldun!</Text>
+                <Text style={{ fontSize: 18, color: isDark ? '#fff' : '#232136', marginBottom: 8 }}>Kazanılan Puan: <Text style={{ color: '#7C3AED', fontWeight: 'bold' }}>{congratsPoints.points}</Text></Text>
+                <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                  <TouchableOpacity onPress={() => { setShowCongratsModal(false); startGame(); }} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginRight: 8 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Tekrar Oyna</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setShowCongratsModal(false); router.back(); }} style={{ backgroundColor: '#FBBF24', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}>
+                    <Text style={{ color: isDark ? '#232136' : '#232136', fontWeight: 'bold', fontSize: 18 }}>Ana Menü</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-      {showTimeUpModal && (
-        <Modal
-          visible={showTimeUpModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowTimeUpModal(false)}
-        >
-          <View style={{flex:1,justifyContent:'center',alignItems:'center',backgroundColor:'rgba(0,0,0,0.45)',zIndex:100}}>
-            <View style={{
-              backgroundColor: isDark ? '#232136' : '#fff',
-              borderRadius:20,
-              padding:32,
-              alignItems:'center',
-              maxWidth:360,
-              shadowColor:'#000',
-              shadowOpacity:0.15,
-              shadowRadius:16,
-              elevation:8
-            }}>
-              <Text style={{fontSize:24,fontWeight:'bold',color:'#F87171',marginBottom:12}}>Süre Doldu!</Text>
-              <Text style={{fontSize:18,color: isDark ? '#fff' : '#232136',marginBottom:18,textAlign:'center'}}>Maalesef, süren doldu. Tekrar deneyebilirsin!</Text>
-              <View style={{flexDirection:'row',gap:16,marginTop:8}}>
-                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); startGame(); }} style={{backgroundColor:'#7C3AED',paddingVertical:10,paddingHorizontal:22,borderRadius:10,marginRight:8}}>
-                  <Text style={{color:'#fff',fontWeight:'bold',fontSize:16}}>Yeniden Başla</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => { setShowTimeUpModal(false); router.back(); }} style={{backgroundColor:'#FBBF24',paddingVertical:10,paddingHorizontal:22,borderRadius:10}}>
-                  <Text style={{color: isDark ? '#232136' : '#232136',fontWeight:'bold',fontSize:16}}>Ana Menü</Text>
-                </TouchableOpacity>
+            </BlurView>
+          </Modal>
+        )}
+        {showTimeUpModal && (
+          <Modal
+            visible={showTimeUpModal}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowTimeUpModal(false)}
+          >
+            <BlurView intensity={60} tint={isDark ? 'dark' : 'light'} style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+              <View style={{ backgroundColor: isDark ? '#232136' : '#fff', borderRadius: 20, padding: 32, alignItems: 'center', maxWidth: 360, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 16, elevation: 8 }}>
+                <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#F87171', marginBottom: 12 }}>Süre Doldu!</Text>
+                <Text style={{ fontSize: 20, color: isDark ? '#fff' : '#232136', marginBottom: 18, textAlign: 'center' }}>Süren doldu. Tekrar deneyebilirsin!</Text>
+                <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                  <TouchableOpacity onPress={() => {
+                    setShowTimeUpModal(false);
+                    // Timer'ı seviyeye göre sıfırla
+                    const levelMultipliers = { A1: 1, A2: 1, B1: 1.2, B2: 1.2, C1: 1.4, C2: 1.4 };
+                    const multiplier = levelMultipliers[settings.level] || 1;
+                    const initialTime = Math.round(90 * multiplier);
+                    setTimeLeft(initialTime);
+                    setGameStarted(false);
+                    setTimeout(() => {
+                      setGameStarted(true);
+                      startGame();
+                    }, 10);
+                  }} style={{ backgroundColor: '#7C3AED', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10, marginRight: 8 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 18 }}>Tekrar Oyna</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setShowTimeUpModal(false); router.back(); }} style={{ backgroundColor: '#FBBF24', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}>
+                    <Text style={{ color: isDark ? '#232136' : '#232136', fontWeight: 'bold', fontSize: 18 }}>Ana Menü</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </View>
-        </Modal>
-      )}
-    </View>
+            </BlurView>
+          </Modal>
+        )}
+      </View>
+    </LinearGradient>
   );
 } 

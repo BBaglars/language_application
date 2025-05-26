@@ -6,6 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useColorScheme as useDeviceColorScheme } from 'react-native';
 import { useUser } from '../../context/UserContext';
 import { Portal } from 'react-native-paper';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ACCENT = '#7C3AED';
 
@@ -41,7 +42,12 @@ export default function Footer() {
   }
 
   return (
-    <View style={[styles.footer, isDark && styles.footerDark]}>
+    <LinearGradient
+      colors={isDark ? ['#181825', '#232136', '#4f378b'] : ['#f8fafc', '#e0e7ff', '#a78bfa']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
+      style={[styles.footer, isDark && styles.footerDark]}
+    >
       <View style={styles.menuContainer}>
         {menuItems.map((item, idx) => {
           const active = isActive(item.route);
@@ -67,11 +73,12 @@ export default function Footer() {
                 isCenter && !active && styles.centerIconContainerInactive,
                 isDark && styles.iconContainerDark,
                 isDark && active && styles.activeIconContainerDark,
-                isDark && isCenter && (active ? styles.centerIconContainerDark : styles.centerIconContainerInactiveDark)
+                isDark && isCenter && (active ? styles.centerIconContainerDark : styles.centerIconContainerInactiveDark),
+                active && { shadowColor: '#7C3AED', shadowOpacity: 0.22, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
               ]}>
                 <MaterialIcons 
                   name={item.icon} 
-                  size={isCenter ? 28 : 24} 
+                  size={isCenter ? 32 : 27} 
                   color={active ? '#fff' : (isDark ? '#a78bfa' : ACCENT)} 
                 />
               </View>
@@ -166,7 +173,7 @@ export default function Footer() {
           </View>
         </Portal>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 

@@ -76,13 +76,13 @@ const generationController = {
         }
       });
 
-      // Kullanılan kelimeleri kaydet
+      // Kullanılan kelimeleri kaydet ve id-text eşleşmelerini topla
+      const usedWordsWithIds = [];
       await Promise.all(
         parsedText.usedWords.map(async (wordText, index) => {
           const word = await prisma.word.findFirst({
             where: { text: wordText }
           });
-          
           if (word) {
             await prisma.storyWord.create({
               data: {
@@ -91,6 +91,7 @@ const generationController = {
                 order: index
               }
             });
+            usedWordsWithIds.push({ id: word.id, text: word.text });
           }
         })
       );
@@ -99,7 +100,7 @@ const generationController = {
         success: true,
         story: {
           ...story,
-          usedWords: parsedText.usedWords
+          usedWords: usedWordsWithIds
         }
       });
     } catch (error) {
